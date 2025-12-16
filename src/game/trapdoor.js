@@ -100,23 +100,46 @@ window.FILE_MANIFEST.push({
                 this.cameraDetected = this.camera.isDetecting();
             }
             
-            // Check player presence in trigger zone
+            // Check player presence in trigger zone with error handling
             this.playerInZone = false;
-            if (this.player && window.PhysicsEngine) {
-                const playerCollider = this.player.getCollider();
-                if (playerCollider) {
-                    this.playerInZone = window.PhysicsEngine.checkAABB(
-                        playerCollider,
-                        {
-                            x: this.triggerX,
-                            y: this.triggerY,
-                            width: this.triggerWidth,
-                            height: this.triggerHeight
+            if (this.player) {
+                try {
+                    if (window.PhysicsEngine && window.PhysicsEngine.checkAABB) {
+                        const playerCollider = this.player.getCollider();
+                        if (playerCollider) {
+                            this.playerInZone = window.PhysicsEngine.checkAABB(
+                                playerCollider,
+                                {
+                                    x: this.triggerX,
+                                    y: this.triggerY,
+                                    width: this.triggerWidth,
+                                    height: this.triggerHeight
+                                }
+                            );
                         }
-                    );
+                    } else {
+                        // Fallback: simple distance check if physics not available
+                        const playerCenter = this.player.position || this.player;
+                        const playerX = playerCenter.x || this.player.x || this.x;
+                        const playerY = playerCenter.y || this.player.y || this.y;
+                        
+                        const centerX = this.triggerX + this.triggerWidth / 2;
+                        const centerY = this.triggerY + this.triggerHeight / 2;
+                        
+                        const distance = Math.sqrt(
+                            Math.pow(playerX - centerX, 2) + 
+                            Math.pow(playerY - centerY, 2)
+                        );
+                        
+                        this.playerInZone = distance < Math.max(this.triggerWidth, this.triggerHeight) / 2;
+                    }
+                } catch (error) {
+                    console.warn('Trap door trigger check failed:', error.message);
+                    this.playerInZone = false;
                 }
             }
         }
+
 
         updateState(dt) {
             const previousState = this.state;
@@ -388,12 +411,29 @@ window.FILE_MANIFEST.push({
 
         getTrapDoorsInArea(x, y, width, height) {
             return this.trapDoors.filter(trap => {
-                return window.PhysicsEngine && window.PhysicsEngine.checkAABB(
-                    { x, y, width, height },
-                    trap.getCollider()
-                );
+                try {
+                    if (window.PhysicsEngine && window.PhysicsEngine.checkAABB) {
+                        return window.PhysicsEngine.checkAABB(
+                            { x, y, width, height },
+                            trap.getCollider()
+                        );
+                    } else {
+                        // Fallback: simple bounds checking
+                        const trapCollider = trap.getCollider();
+                        if (!trapCollider) return false;
+                        
+                        return !(x > trapCollider.x + trapCollider.width ||
+                                x + width < trapCollider.x ||
+                                y > trapCollider.y + trapCollider.height ||
+                                y + height < trapCollider.y);
+                    }
+                } catch (error) {
+                    console.warn('Trap door area check failed:', error.message);
+                    return false;
+                }
             });
         }
+
 
         resetAll() {
             this.trapDoors.forEach(trap => trap.reset());

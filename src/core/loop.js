@@ -203,5 +203,22 @@ window.GameLoop.setPaused = function(paused) {
     }
 };
 
+/**
+ * Reset the game loop state
+ */
+window.GameLoop.reset = function() {
+    this.isRunning = false;
+    this.frameCount = 0;
+    this.fps = 0;
+    this.fpsUpdateTime = 0;
+    
+    if (this.animationId !== null) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+    }
+    
+    console.log('GameLoop: Reset');
+};
+
 // Initialize the game loop system
 window.GameLoop.init();

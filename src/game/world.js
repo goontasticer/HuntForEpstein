@@ -219,10 +219,21 @@ window.GameWorld = class GameWorld {
      * Check if current level is complete (all files collected)
      */
     isLevelComplete() {
-        const totalFilesInLevel = this.levelGenerator.getFileCountForLevel(this.currentLevel);
-        const collectedInLevel = this.levelFiles[this.currentLevel].size;
+        // Count total files in current level by checking all rooms
+        let totalFilesInLevel = 0;
+        for (let y = 0; y < this.gridHeight; y++) {
+            for (let x = 0; x < this.gridWidth; x++) {
+                const room = this.rooms[y][x];
+                if (room && room.items) {
+                    totalFilesInLevel += room.items.filter(item => item.type === 'file').length;
+                }
+            }
+        }
+        
+        const collectedInLevel = this.levelFiles[this.currentLevel] ? this.levelFiles[this.currentLevel].size : 0;
         return collectedInLevel >= totalFilesInLevel;
     }
+
     
     /**
      * Progress to next level

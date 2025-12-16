@@ -278,10 +278,21 @@ window.Enemy = class Enemy {
   }
   
   checkLineOfSight(targetPosition) {
-    // Simple raycast check
-    const result = window.gamePhysics.raycast(this.position, targetPosition, [this]);
-    return !result.hit;
+    // Simple raycast check with error handling
+    if (window.gamePhysics && window.gamePhysics.raycast) {
+      try {
+        const result = window.gamePhysics.raycast(this.position, targetPosition, [this]);
+        return !result.hit;
+      } catch (error) {
+        console.warn('Raycast failed:', error.message);
+        return true; // Assume clear line of sight if raycast fails
+      }
+    } else {
+      console.warn('Physics system not available - line of sight check disabled');
+      return true; // Fallback: assume clear line of sight
+    }
   }
+
   
   updateFacing() {
     if (Math.abs(this.velocity.x) > Math.abs(this.velocity.y)) {

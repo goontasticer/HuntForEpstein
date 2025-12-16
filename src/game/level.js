@@ -74,10 +74,8 @@ window.Room = class Room {
         this.generateExit();
         break;
     }
-    
-    // Spawn collectibles and power-ups using new system
-    this.spawnCollectiblesAndPowerups();
   }
+
   
   generateOfficeLayout() {
     // Different layouts based on room type
@@ -996,8 +994,9 @@ window.LevelGenerator = class LevelGenerator {
   }
   
   distributeFiles(rooms, levelNumber) {
-    // File distribution is now handled by room.spawnCollectiblesAndPowerups()
+    // File distribution is now handled by room content generation
     // This method now ensures the 10-file minimum across the level
+
     
     let totalFiles = 0;
     
@@ -1022,8 +1021,19 @@ window.LevelGenerator = class LevelGenerator {
       for (let i = 0; i < filesNeeded; i++) {
         const room = availableRooms[i % availableRooms.length];
         const fileId = `file_extra_${levelNumber}_${i}`;
-        const file = window.CollectibleFile.placeInRoom(room, fileId);
+        
+        // Create file object directly
+        const file = {
+          type: 'file',
+          position: new window.Vector2D(
+            room.x + Math.random() * (room.width - 40) + 20,
+            room.y + Math.random() * (room.height - 40) + 20
+          ),
+          collected: false,
+          id: fileId
+        };
         room.items.push(file);
+
       }
     }
     
@@ -1051,11 +1061,20 @@ window.Level = class Level {
     this.rooms = this.generator.generateLevel(this.levelNumber);
     this.currentRoom = this.rooms[0]; // Start in entry room
     
-    // Add room colliders to physics
-    for (const room of this.rooms) {
-      window.gamePhysics.addStaticCollider(room.bounds);
+    // Add room colliders to physics with error handling
+    if (window.gamePhysics && window.gamePhysics.addStaticCollider) {
+      for (const room of this.rooms) {
+        try {
+          window.gamePhysics.addStaticCollider(room.bounds);
+        } catch (error) {
+          console.warn('Failed to add room collider to physics system:', error.message);
+        }
+      }
+    } else {
+      console.warn('Physics system not available - room colliders disabled');
     }
   }
+
   
   update(dt) {
     // Update current room

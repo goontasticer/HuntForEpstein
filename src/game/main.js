@@ -160,15 +160,35 @@ window.EpsteinGame = class {
    * Initialize all systems in proper dependency order
    */
   async initializeSystems() {
-    const { constants, input, loop, renderer, physics, world, gameState, ui, hud, menus, permadeath } = this.systems;
+    const { constants, input, loop, renderer, world, gameState, ui, hud, menus, permadeath } = this.systems;
 
-    // Initialize core systems
-    this.systems.inputHandler = window.Input;
-    this.systems.gameLoop = window.GameLoop;
+    // Core systems are already stored in this.systems from validateDependencies()
+    // Input and GameLoop are object literals, not constructors
+    
     this.systems.renderer = new renderer(this.canvas);
+
+    
+    // Initialize physics engine with proper error handling
+    if (window.PhysicsEngine) {
+      try {
+        // Check if global instance exists, if not create one
+        if (!window.gamePhysics) {
+          window.gamePhysics = new window.PhysicsEngine();
+        }
+        this.systems.physics = window.gamePhysics;
+        console.log('Physics engine initialized successfully');
+      } catch (error) {
+        console.error('Physics engine initialization failed:', error.message);
+        this.systems.physics = null;
+      }
+    } else {
+      console.error('PhysicsEngine class not found');
+      this.systems.physics = null;
+    }
     
     // Expose renderer globally for other systems
     window.gameRenderer = this.systems.renderer;
+
 
 
 
@@ -195,9 +215,20 @@ window.EpsteinGame = class {
 
     // Create player instance
     if (window.Player) {
-      window.game.player = new window.Player(constants.CANVAS_WIDTH / 2, constants.CANVAS_HEIGHT / 2);
-      physics.addEntity(window.game.player);
+      try {
+        window.game.player = new window.Player(constants.CANVAS_WIDTH / 2, constants.CANVAS_HEIGHT / 2);
+        
+        // Add player to physics system with error handling
+        if (this.systems.physics && this.systems.physics.addEntity) {
+          this.systems.physics.addEntity(window.game.player);
+        } else {
+          console.warn('Physics system not available - player collision disabled');
+        }
+      } catch (error) {
+        console.error('Player creation failed:', error.message);
+      }
     }
+
 
     // Initialize stealth system
     if (window.StealthSystem) {
@@ -327,7 +358,8 @@ window.EpsteinGame = class {
 
     if (this.systems.gameState.isState('menu')) {
       this.systems.gameState.startGame();
-      this.systems.gameLoop.start();
+      this.systems.loop.start();
+
       console.log('Game started');
     }
   }
@@ -336,7 +368,7 @@ window.EpsteinGame = class {
    * Restart the game with fresh state
    */
   restart() {
-    const { permadeath, gameState, world, physics, constants } = this.systems;
+    const { permadeath, gameState, world, constants } = this.systems;
 
     // End current run
     permadeath.endRun(false, 'restart');
@@ -346,15 +378,30 @@ window.EpsteinGame = class {
 
     // Clear entities except player
     window.game.entities = [];
-    physics.entities = [];
-    physics.staticColliders = [];
-    physics.triggers = [];
+    
+    // Clear physics system if available
+    if (this.systems.physics) {
+      this.systems.physics.entities = [];
+      this.systems.physics.staticColliders = [];
+      this.systems.physics.triggers = [];
+    }
 
     // Recreate player
     if (window.Player) {
-      window.game.player = new window.Player(constants.CANVAS_WIDTH / 2, constants.CANVAS_HEIGHT / 2);
-      physics.addEntity(window.game.player);
+      try {
+        window.game.player = new window.Player(constants.CANVAS_WIDTH / 2, constants.CANVAS_HEIGHT / 2);
+        
+        // Add player to physics system with error handling
+        if (this.systems.physics && this.systems.physics.addEntity) {
+          this.systems.physics.addEntity(window.game.player);
+        } else {
+          console.warn('Physics system not available - player collision disabled');
+        }
+      } catch (error) {
+        console.error('Player recreation failed:', error.message);
+      }
     }
+
 
     // Reset stealth system
     if (window.stealthSystem) {
@@ -371,7 +418,10 @@ window.EpsteinGame = class {
     window.game.currentLevel = world.currentLevel;
 
     // Reset game loop
-    this.systems.gameLoop.reset();
+    if (this.systems.loop && typeof this.systems.loop.reset === 'function') {
+      this.systems.loop.reset();
+    }
+
 
     console.log('Game restarted');
   }
@@ -396,7 +446,11 @@ window.EpsteinGame = class {
 
       // Update systems
       renderer.update(dt);
-      physics.update(dt);
+      
+      // Update physics system if available
+      if (this.systems.physics) {
+        this.systems.physics.update(dt);
+      }
 
       if (window.stealthSystem) {
         window.stealthSystem.update(dt);
@@ -414,10 +468,13 @@ window.EpsteinGame = class {
 
         // Remove dead entities
         if (entity.isDead) {
-          physics.removeEntity(entity);
+          if (this.systems.physics && this.systems.physics.removeEntity) {
+            this.systems.physics.removeEntity(entity);
+          }
           window.game.entities.splice(i, 1);
         }
       }
+
 
       // Check win/lose conditions
       this.checkGameState();
@@ -518,7 +575,7 @@ window.EpsteinGame = class {
    * Progress to next level
    */
   nextLevel() {
-    const { world, physics, constants, permadeath } = this.systems;
+    const { world, constants, permadeath } = this.systems;
 
     try {
       window.game.currentLevel++;
@@ -526,13 +583,18 @@ window.EpsteinGame = class {
 
       // Clear entities except player
       window.game.entities = [];
-      physics.entities = [window.game.player];
-      physics.staticColliders = [];
-      physics.triggers = [];
+      
+      // Clear physics system if available, preserving player
+      if (this.systems.physics) {
+        this.systems.physics.entities = window.game.player ? [window.game.player] : [];
+        this.systems.physics.staticColliders = [];
+        this.systems.physics.triggers = [];
+      }
 
       // Progress world
       world.progressToNextLevel();
       window.game.currentLevel = world.currentLevel;
+
 
       // Reset player position
       if (window.game.player) {
@@ -562,7 +624,8 @@ window.EpsteinGame = class {
    */
   renderDebugInfo(ctx) {
     try {
-      const perf = { fps: this.systems.gameLoop.getFPS(), frameCount: this.systems.gameLoop.frameCount };
+      const perf = { fps: this.systems.loop.getFPS(), frameCount: this.systems.loop.frameCount };
+
       const input = { activeKeys: window.Input.getActiveKeys() };
 
       this.systems.renderer.drawUIText(`FPS: ${perf.fps}`, 10, 10, '#0f0');
@@ -700,17 +763,61 @@ window.epsteinGame = null;
  * Initialize game (legacy compatibility)
  */
 window.initGame = function() {
-  const canvas = document.getElementById('gameCanvas');
+  // Enhanced canvas detection with multiple fallback strategies
+  let canvas = null;
+  
+  // Strategy 1: Direct ID lookup
+  canvas = document.getElementById('gameCanvas');
+  
+  // Strategy 2: Try common alternative IDs
   if (!canvas) {
-    console.error('Game canvas not found');
+    const alternativeIds = ['canvas', 'game-canvas', 'mainCanvas', 'game_canvas'];
+    for (const id of alternativeIds) {
+      canvas = document.getElementById(id);
+      if (canvas) break;
+    }
+  }
+  
+  // Strategy 3: Find any canvas element
+  if (!canvas) {
+    const canvases = document.getElementsByTagName('canvas');
+    if (canvases.length > 0) {
+      canvas = canvases[0];
+      console.warn('Using first available canvas element instead of #gameCanvas');
+    }
+  }
+  
+  // Strategy 4: Create canvas if none exists
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'gameCanvas';
+    canvas.width = window.GAME_CONSTANTS ? window.GAME_CONSTANTS.CANVAS_WIDTH : 800;
+    canvas.height = window.GAME_CONSTANTS ? window.GAME_CONSTANTS.CANVAS_HEIGHT : 600;
+    canvas.style.border = '2px solid red';
+    
+    // Add to document body
+    document.body.appendChild(canvas);
+    console.warn('Created new canvas element as fallback');
+  }
+  
+  // Validate canvas is actually usable
+  if (!canvas || !canvas.getContext) {
+    console.error('Canvas element is not usable');
     return;
   }
 
-  window.epsteinGame = new window.EpsteinGame();
-  return window.epsteinGame.initialize(canvas).catch(error => {
-    console.error('Game initialization failed:', error.message);
-  });
+  try {
+    window.epsteinGame = new window.EpsteinGame();
+    return window.epsteinGame.initialize(canvas).catch(error => {
+      console.error('Game initialization failed:', error.message);
+      throw error;
+    });
+  } catch (error) {
+    console.error('Failed to create game instance:', error.message);
+  }
 };
+
+
 
 
 
@@ -736,15 +843,79 @@ window.restartGame = function() {
   }
 };
 
-// Auto-initialize when page loads
-window.addEventListener('load', () => {
+// Enhanced auto-initialization with robust DOM readiness
+function initializeGameWhenReady() {
+  // Check if DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGameWhenReady);
+    return;
+  }
+  
   // MakkoEngine is optional - proceed with initialization
   console.log('Initializing game - MakkoEngine ' + (window.MakkoEngine ? 'available' : 'not available (using fallback)'));
 
-  // Wait for all scripts to load
-  setTimeout(() => {
-    if (!window.epsteinGame) {
-      window.initGame();
+  // Wait for all scripts to load with multiple fallbacks
+  let attempts = 0;
+  const maxAttempts = 50; // 5 seconds max wait
+  
+  function tryInitialize() {
+    attempts++;
+    
+    // Prevent multiple simultaneous initializations
+    if (window.epsteinGame) {
+      console.log('Game already initialized - skipping duplicate attempt');
+      return;
     }
-  }, 100);
-});
+    
+    // Check if critical dependencies are loaded - match the validation logic
+    const requiredDeps = [
+      'GAME_CONSTANTS',
+      'Input', 
+      'GameLoop',
+      'Renderer',
+      'PhysicsEngine',
+      'GameWorld',
+      'GameStateManager',
+      'UISystem',
+      'HUD',
+      'MenuManager',
+      'PermadeathManager'
+    ];
+    const missingDeps = requiredDeps.filter(dep => !window[dep]);
+
+
+    
+    if (missingDeps.length === 0) {
+      try {
+        window.initGame();
+      } catch (error) {
+        console.error('Game initialization failed:', error.message);
+      }
+    } else if (attempts < maxAttempts) {
+      console.log(`Waiting for dependencies (attempt ${attempts}/${maxAttempts}): ${missingDeps.join(', ')}`);
+      setTimeout(tryInitialize, 100);
+    } else {
+      console.error('Failed to initialize game - dependencies not loaded:', missingDeps);
+      // Try anyway as a fallback
+      try {
+        window.initGame();
+      } catch (error) {
+        console.error('Fallback initialization failed:', error.message);
+      }
+    }
+
+  }
+  
+  tryInitialize();
+}
+
+// Try multiple initialization strategies
+if (document.readyState === 'complete') {
+  // Page already loaded
+  initializeGameWhenReady();
+} else {
+  // Page still loading
+  window.addEventListener('load', initializeGameWhenReady);
+  document.addEventListener('DOMContentLoaded', initializeGameWhenReady);
+}
+
