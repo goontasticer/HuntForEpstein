@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Hunt For The Epstein Files</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            background: #000;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .topbar {
+            background: rgb(16 18 24 / 0.8);
+            padding: 8px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hint {
+            background: rgb(16 18 24 / 0.8);
+            padding: 8px 12px;
+            text-align: center;
+            color: #999;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        #gameCanvas {
+            display: block;
+            max-width: 1920px;
+            max-height: 1080px;
+        }
+    </style>
+    <link rel="stylesheet" href="src/styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <div class="topbar">
+            <span style="color: #fff; font-family: monospace;">The Hunt For The Epstein Files</span>
+            <span id="level-indicator" style="color: #888; font-family: monospace;">Level 1</span>
+        </div>
+        <canvas id="gameCanvas" width="1920" height="1080"></canvas>
+        <div class="hint">Use Arrow Keys to move. Space to interact. Shift+F for fullscreen.</div>
+    </div>
+
+    <!-- Scripts MUST be loaded in dependency order -->
+    <!-- Level 0: Third-party libraries (MakkoEngine for sprite animations) -->
+    <script src="/lib/MakkoEngine.min.js"></script>
+
+    <!-- Level 1: Utilities (no dependencies) -->
+    <script src="src/utils/constants.js"></script>
+    <script src="src/utils/math.js"></script>
+
+    <!-- Level 2: Core systems (depend on utils) -->
+    <script src="src/core/input.js"></script>
+    <script src="src/core/loop.js"></script>
+
+    <!-- Level 3: Engine (depends on utils + core) -->
+    <script src="src/engine/renderer.js"></script>
+    <script src="src/engine/physics.js"></script>
+
+    <!-- Level 4: Game entities (depend on engine) -->
+    <script src="src/game/player.js"></script>
+    <script src="src/game/level.js"></script>
+    <script src="src/game/entities.js"></script>
+    <script src="src/game/stealth-system.js"></script>
+    <script src="src/game/trapdoor.js"></script>
+    <script src="src/game/camera.js"></script>
+    <script src="src/game/world.js"></script>
+
+    <!-- Level 5: UI Systems (depend on game entities) -->
+    <script src="src/ui/gamestate.js"></script>
+    <script src="src/ui/ui-system.js"></script>
+    <script src="src/ui/hud.js"></script>
+    <script src="src/ui/menus.js"></script>
+    <script src="src/ui/permadeath.js"></script>
+
+    <!-- Level 6: Game loop and initialization (depends on all) -->
+    <script src="src/game/main.js"></script>
+</body>
+</html>
