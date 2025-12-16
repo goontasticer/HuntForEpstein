@@ -155,9 +155,10 @@ window.EpsteinGame = class {
     const { constants, input, loop, renderer, physics, world, gameState, ui, hud, menus, permadeath } = this.systems;
 
     // Initialize core systems
-    this.systems.inputHandler = new input();
-    this.systems.gameLoop = new loop();
+    this.systems.inputHandler = window.Input;
+    this.systems.gameLoop = window.GameLoop;
     this.systems.renderer = new renderer(this.canvas);
+
 
     // Initialize game state
     window.game = {
@@ -404,9 +405,10 @@ window.EpsteinGame = class {
       this.checkGameState();
 
       // Debug input
-      if (window.Input && window.Input.isBindingPressed('debug')) {
+      if (window.Input && window.Input.isActionPressed('debug1')) {
         window.game.ui.showDebug = !window.game.ui.showDebug;
       }
+
     } catch (error) {
       console.error('Game update error:', error.message);
     }
@@ -533,8 +535,8 @@ window.EpsteinGame = class {
    */
   renderDebugInfo(ctx) {
     try {
-      const perf = this.systems.gameLoop.getPerformanceInfo();
-      const input = window.Input.getDebugInfo();
+      const perf = { fps: this.systems.gameLoop.getFPS(), frameCount: this.systems.gameLoop.frameCount };
+      const input = { activeKeys: window.Input.getActiveKeys() };
 
       this.systems.renderer.drawUIText(`FPS: ${perf.fps}`, 10, 10, '#0f0');
       this.systems.renderer.drawUIText(`Frame: ${perf.frameCount}`, 10, 25, '#0f0');
@@ -555,6 +557,7 @@ window.EpsteinGame = class {
         this.systems.renderer.drawUIText(`Visibility: ${Math.round(window.stealthSystem.getPlayerVisibility() * 100)}%`, 10, 130, '#0f0');
         this.systems.renderer.drawUIText(`Keys: [${input.activeKeys.join(', ')}]`, 10, 145, '#0f0');
       }
+
     } catch (error) {
       console.error('Debug info render error:', error.message);
     }
@@ -670,7 +673,7 @@ window.epsteinGame = null;
  * Initialize game (legacy compatibility)
  */
 window.initGame = function() {
-  const canvas = document.getElementById('gameCanvas');
+  const canvas = document.getElementById('game-canvas');
   if (!canvas) {
     console.error('Game canvas not found');
     return;
@@ -681,6 +684,7 @@ window.initGame = function() {
     console.error('Game initialization failed:', error.message);
   });
 };
+
 
 /**
  * Start game (legacy compatibility)
