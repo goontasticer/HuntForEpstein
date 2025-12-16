@@ -22,6 +22,10 @@ window.Renderer = class Renderer {
       targetZoom: 1
     };
     
+    // Initialize camera position to center
+    this.setCameraPosition(window.GAME_CONSTANTS.CANVAS_WIDTH / 2, window.GAME_CONSTANTS.CANVAS_HEIGHT / 2, true);
+
+    
     // 2.5D perspective settings
     this.perspective = {
       horizon: window.GAME_CONSTANTS.CANVAS_HEIGHT / 2,
@@ -943,6 +947,16 @@ window.Renderer = class Renderer {
     return `rgb(${newR}, ${newG}, ${newB})`;
   }
   
+  drawUIText(text, x, y, color = '#fff', font = '14px monospace') {
+    this.ctx.save();
+    this.ctx.fillStyle = color;
+    this.ctx.font = font;
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'top';
+    this.ctx.fillText(text, x, y);
+    this.ctx.restore();
+  }
+
   getPixelPerfection() {
     // Return pixel-perfect position for rendering
     return {
@@ -951,6 +965,7 @@ window.Renderer = class Renderer {
       zoom: this.camera.zoom
     };
   }
+
   
   // ==================== DEBUG METHODS ====================
   

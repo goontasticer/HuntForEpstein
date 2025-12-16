@@ -1082,7 +1082,10 @@ window.Level = class Level {
           
           // Update camera to center on new room
           const roomCenter = room.bounds.getCenter();
-          window.gameRenderer.camera.setPosition(roomCenter.x, roomCenter.y);
+          if (window.gameRenderer && window.gameRenderer.setCameraPosition) {
+            window.gameRenderer.setCameraPosition(roomCenter.x, roomCenter.y);
+          }
+
           
           console.log(`Entered room: ${room.type}`);
         }

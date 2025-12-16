@@ -78,29 +78,39 @@ window.GameLoop.gameLoop = function(currentTime) {
  * @param {number} dt - Delta time in seconds
  */
 window.GameLoop.updateGame = function(dt) {
-    // Placeholder for game logic updates
-    // Future tasks will implement:
-    // - Player movement
-    // - Physics simulation
-    // - Entity behavior
-    // - Collision detection
-    // - Game state management
-    
-    // For now, just ensure dt is available globally
-    // This allows future systems to use window.dt immediately
+    // Update game systems
+    if (window.updateGame && typeof window.updateGame === 'function') {
+        window.updateGame(dt);
+    }
 };
+
 
 /**
  * Render the current frame
  */
 window.GameLoop.render = function() {
-    // Placeholder for rendering logic
-    // Future tasks will implement:
-    // - Clear canvas
-    // - Render entities
-    // - Render UI
-    // - Render effects
+    // Get canvas and context
+    if (!window.epsteinGame || !window.epsteinGame.canvas) {
+        return;
+    }
+    
+    const canvas = window.epsteinGame.canvas;
+    const ctx = canvas.getContext('2d');
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Render game
+    if (window.renderGame && typeof window.renderGame === 'function') {
+        window.renderGame(ctx);
+    }
+    
+    // Render UI
+    if (window.renderUI && typeof window.renderUI === 'function') {
+        window.renderUI(ctx);
+    }
 };
+
 
 /**
  * Update frame statistics (FPS counter)

@@ -3,7 +3,8 @@ window.FILE_MANIFEST = window.FILE_MANIFEST || [];
 window.FILE_MANIFEST.push({
   name: 'src/game/main.js',
   exports: ['EpsteinGame', 'initGame', 'startGame', 'restartGame'],
-  dependencies: ['GAME_CONSTANTS', 'Input', 'GameLoop', 'Renderer', 'PhysicsEngine', 'GameWorld', 'GameStateManager', 'UISystem', 'HUD', 'MenuManager', 'PermadeathManager', 'MakkoEngine']
+  dependencies: ['GAME_CONSTANTS', 'Input', 'GameLoop', 'Renderer', 'PhysicsEngine', 'GameWorld', 'GameStateManager', 'UISystem', 'HUD', 'MenuManager', 'PermadeathManager']
+
 });
 
 /**
@@ -61,8 +62,13 @@ window.EpsteinGame = class {
    * Load MakkoEngine sprite assets with progress tracking and graceful error handling
    */
   async loadAssets() {
+    // MakkoEngine is optional - game will work with fallback rendering
     if (!window.MakkoEngine) {
-      throw new Error('MakkoEngine not loaded. Check script order in index.html');
+      console.log('MakkoEngine not available - using fallback rendering');
+      this.hasAssetError = false; // Not an error, just fallback
+      this.updateLoadingScreen(1, 1);
+      this.isAssetsLoaded = true;
+      return;
     }
 
     // Check if sprites-manifest.json exists by attempting to fetch it first
@@ -76,9 +82,8 @@ window.EpsteinGame = class {
     }
 
     if (!manifestExists) {
-      console.warn('sprites-manifest.json not found - continuing with minimal game experience');
-      this.hasAssetError = true;
-      this.updateLoadingScreen(0, 1);
+      console.log('sprites-manifest.json not found - continuing with fallback rendering');
+      this.hasAssetError = false; // Not an error, just fallback
       this.updateLoadingScreen(1, 1);
       this.isAssetsLoaded = true;
       return;
@@ -108,6 +113,7 @@ window.EpsteinGame = class {
     });
   }
 
+
   /**
    * Validate all required dependencies are available
    */
@@ -128,6 +134,7 @@ window.EpsteinGame = class {
 
     const missing = requiredSystems.filter(name => !window[name]);
     if (missing.length > 0) {
+      console.error('Missing required systems:', missing);
       throw new Error(`Missing required systems: ${missing.join(', ')}`);
     }
 
@@ -144,9 +151,10 @@ window.EpsteinGame = class {
       hud: window.HUD,
       menus: window.MenuManager,
       permadeath: window.PermadeathManager,
-      makko: window.MakkoEngine
+      makko: window.MakkoEngine || null
     };
   }
+
 
   /**
    * Initialize all systems in proper dependency order
@@ -158,6 +166,11 @@ window.EpsteinGame = class {
     this.systems.inputHandler = window.Input;
     this.systems.gameLoop = window.GameLoop;
     this.systems.renderer = new renderer(this.canvas);
+    
+    // Expose renderer globally for other systems
+    window.gameRenderer = this.systems.renderer;
+
+
 
 
     // Initialize game state
@@ -175,8 +188,10 @@ window.EpsteinGame = class {
         showDebug: false
       },
       stateStartTime: Date.now(),
-      hasAssetError: this.hasAssetError
+      hasAssetError: this.hasAssetError,
+      renderer: this.systems.renderer // Add renderer reference
     };
+
 
     // Create player instance
     if (window.Player) {
@@ -371,17 +386,20 @@ window.EpsteinGame = class {
     const { renderer, physics, world } = this.systems;
 
     try {
+      // Update player first for camera following
+      if (window.game.player) {
+        window.game.player.update(dt);
+        
+        // Update camera to follow player
+        renderer.setCameraPosition(window.game.player.position.x, window.game.player.position.y);
+      }
+
       // Update systems
       renderer.update(dt);
       physics.update(dt);
 
       if (window.stealthSystem) {
         window.stealthSystem.update(dt);
-      }
-
-      // Update player
-      if (window.game.player) {
-        window.game.player.update(dt);
       }
 
       // Update world
@@ -414,6 +432,7 @@ window.EpsteinGame = class {
     }
   }
 
+
   /**
    * Main game render function
    * @param {CanvasRenderingContext2D} ctx - Canvas context
@@ -422,25 +441,31 @@ window.EpsteinGame = class {
     const { renderer } = this.systems;
     
     try {
+      // Clear layers and repopulate
+      renderer.clearLayers();
+      
       // Render current room
       const currentRoom = window.game.world.getCurrentRoom();
       if (currentRoom && currentRoom.render) {
         currentRoom.render(renderer);
       }
 
-      // Render entities
+      // Add entities to entity layer
       for (const entity of window.game.entities) {
         if (entity.render) {
-          entity.render(renderer);
+          renderer.addToLayer('entities', entity);
         }
       }
 
-      // Render player
+      // Add player to entity layer (rendered last so on top)
       if (window.game.player) {
-        window.game.player.render(renderer);
+        renderer.addToLayer('entities', window.game.player);
       }
 
-      // Render debug info
+      // Use renderer's main render method which handles camera and layers
+      renderer.render(window.dt);
+      
+      // Debug info is rendered separately
       if (window.game.ui.showDebug) {
         this.renderDebugInfo(ctx);
       }
@@ -448,6 +473,8 @@ window.EpsteinGame = class {
       console.error('Game render error:', error.message);
     }
   }
+
+
 
   /**
    * Main UI render function
@@ -673,7 +700,7 @@ window.epsteinGame = null;
  * Initialize game (legacy compatibility)
  */
 window.initGame = function() {
-  const canvas = document.getElementById('game-canvas');
+  const canvas = document.getElementById('gameCanvas');
   if (!canvas) {
     console.error('Game canvas not found');
     return;
@@ -684,6 +711,7 @@ window.initGame = function() {
     console.error('Game initialization failed:', error.message);
   });
 };
+
 
 
 /**
@@ -710,11 +738,8 @@ window.restartGame = function() {
 
 // Auto-initialize when page loads
 window.addEventListener('load', () => {
-  // Check if MakkoEngine is available
-  if (!window.MakkoEngine) {
-    console.error('MakkoEngine not loaded. Check script order in index.html');
-    return;
-  }
+  // MakkoEngine is optional - proceed with initialization
+  console.log('Initializing game - MakkoEngine ' + (window.MakkoEngine ? 'available' : 'not available (using fallback)'));
 
   // Wait for all scripts to load
   setTimeout(() => {
