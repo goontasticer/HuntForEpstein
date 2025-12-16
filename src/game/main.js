@@ -212,6 +212,12 @@ window.EpsteinGame = class {
       renderer: this.systems.renderer // Add renderer reference
     };
 
+    // Show main menu immediately after initialization
+    if (window.menuManager) {
+      window.menuManager.showMenu('main');
+    }
+
+
 
     // Create player instance
     if (window.Player) {
@@ -357,12 +363,12 @@ window.EpsteinGame = class {
     }
 
     if (this.systems.gameState.isState('menu')) {
-      this.systems.gameState.startGame();
+      // Start the game loop but stay in menu state until user selects start
       this.systems.loop.start();
-
-      console.log('Game started');
+      console.log('Game started - showing main menu');
     }
   }
+
 
   /**
    * Restart the game with fresh state

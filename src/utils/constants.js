@@ -8,8 +8,9 @@ window.FILE_MANIFEST.push({
 
 window.GAME_CONSTANTS = {
   // Canvas dimensions
-  CANVAS_WIDTH: 1920,
-  CANVAS_HEIGHT: 1080,
+  CANVAS_WIDTH: 1000,
+  CANVAS_HEIGHT: 1000,
+
   
   // Game timing
   MAX_FPS: 60,

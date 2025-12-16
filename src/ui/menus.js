@@ -301,9 +301,11 @@ window.MenuManager = class MenuManager {
   handleMenuAction(action) {
     switch (action) {
       case 'start':
-        window.gameState.startGame();
+        // Transition to playing state properly
+        window.gameState.setState(window.GAME_CONSTANTS.GAME_STATES.PLAYING);
         this.hideMenu();
         break;
+
         
       case 'resume':
         window.gameState.resumeGame();
