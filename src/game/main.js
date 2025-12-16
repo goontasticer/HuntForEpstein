@@ -212,10 +212,14 @@ window.EpsteinGame = class {
       renderer: this.systems.renderer // Add renderer reference
     };
 
-    // Show main menu immediately after initialization
-    if (window.menuManager) {
-      window.menuManager.showMenu('main');
-    }
+    // Auto-start the game after initialization
+    setTimeout(() => {
+      if (this.systems.gameState) {
+        this.systems.gameState.startGame();
+        console.log('Game auto-started to PLAYING state');
+      }
+    }, 500); // Small delay to ensure everything is loaded
+
 
 
 

@@ -23,7 +23,8 @@ window.Renderer = class Renderer {
     };
     
     // Initialize camera position to center
-    this.setCameraPosition(window.GAME_CONSTANTS.CANVAS_WIDTH / 2, window.GAME_CONSTANTS.CANVAS_HEIGHT / 2, true);
+    this.setCameraPosition(0, 0, true);
+
 
     
     // 2.5D perspective settings
@@ -105,14 +106,15 @@ window.Renderer = class Renderer {
   // ==================== CAMERA MANAGEMENT ====================
   
   setCameraPosition(x, y, immediate = false) {
-    this.camera.targetX = x - window.GAME_CONSTANTS.CANVAS_WIDTH / 2;
-    this.camera.targetY = y - window.GAME_CONSTANTS.CANVAS_HEIGHT / 2;
+    this.camera.targetX = x;
+    this.camera.targetY = y;
     
     if (immediate) {
       this.camera.x = this.camera.targetX;
       this.camera.y = this.camera.targetY;
     }
   }
+
   
   updateCamera(dt) {
     // Smooth camera movement
@@ -159,10 +161,11 @@ window.Renderer = class Renderer {
   
   worldToScreen(worldX, worldY) {
     return {
-      x: (worldX - this.camera.x) * this.camera.zoom,
-      y: (worldY - this.camera.y) * this.camera.zoom
+      x: worldX * this.camera.zoom,
+      y: worldY * this.camera.zoom
     };
   }
+
   
   // ==================== CULLING MANAGEMENT ====================
   
@@ -311,12 +314,14 @@ window.Renderer = class Renderer {
     // Save context state
     this.ctx.save();
     
-    // Apply screen shake
-    this.ctx.translate(this.effects.screenShake.offsetX, this.effects.screenShake.offsetY);
-    
     // Clear canvas
     this.ctx.fillStyle = window.GAME_CONSTANTS.COLORS.BACKGROUND;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    
+    // Apply camera transform and screen shake
+    this.ctx.translate(-this.camera.x * this.camera.zoom, -this.camera.y * this.camera.zoom);
+    this.ctx.translate(this.effects.screenShake.offsetX, this.effects.screenShake.offsetY);
+
     
     // Render layers in order
     this.renderBackground();

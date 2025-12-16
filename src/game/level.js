@@ -436,17 +436,21 @@ window.Room = class Room {
       floorColor = '#1a1a2a'; // Slight blue tint for entry
     }
     
-    renderer.drawRect(this.x, this.y, this.width, this.height, floorColor, true);
+    renderer.ctx.fillStyle = floorColor;
+    renderer.ctx.fillRect(this.x, this.y, this.width, this.height);
     
     // Render furniture
     for (const furniture of this.furniture) {
-      renderer.drawRect(furniture.x, furniture.y, furniture.width, furniture.height, furniture.color, true);
-      renderer.drawRect(furniture.x, furniture.y, furniture.width, furniture.height, '#000000', false);
+      renderer.ctx.fillStyle = furniture.color;
+      renderer.ctx.fillRect(furniture.x, furniture.y, furniture.width, furniture.height);
+      renderer.ctx.strokeStyle = '#000000';
+      renderer.ctx.strokeRect(furniture.x, furniture.y, furniture.width, furniture.height);
       
       // Add details for specific furniture types
       if (furniture.type === 'COMPUTER') {
         // Draw screen
-        renderer.drawRect(furniture.x + 2, furniture.y + 2, furniture.width - 4, furniture.height - 4, '#333333', true);
+        renderer.ctx.fillStyle = '#333333';
+        renderer.ctx.fillRect(furniture.x + 2, furniture.y + 2, furniture.width - 4, furniture.height - 4);
       } else if (furniture.type === 'PLANT') {
         // Draw plant leaves
         renderer.drawCircle(furniture.x + furniture.width/2, furniture.y + furniture.height/2, 6, '#90EE90', true);
@@ -454,7 +458,10 @@ window.Room = class Room {
     }
     
     // Render walls
-    renderer.drawRect(this.x, this.y, this.width, this.height, colors.WALL, false);
+    renderer.ctx.strokeStyle = colors.WALL;
+    renderer.ctx.lineWidth = 2;
+    renderer.ctx.strokeRect(this.x, this.y, this.width, this.height);
+
     
     // Render room type indicator
     let indicatorColor = '#666';
@@ -488,7 +495,9 @@ window.Room = class Room {
     }
     
     // Draw room indicator in corner
-    renderer.drawRect(this.x + 5, this.y + 5, 16, 16, indicatorColor, true);
+    renderer.ctx.fillStyle = indicatorColor;
+    renderer.ctx.fillRect(this.x + 5, this.y + 5, 16, 16);
+
     
     // Render connections (doors)
     for (const connectedRoom of this.connections) {
@@ -497,20 +506,15 @@ window.Room = class Room {
     
     // Render hide spots
     for (const hideSpot of this.hideSpots) {
-      renderer.drawCircle(
-        hideSpot.position.x,
-        hideSpot.position.y,
-        hideSpot.radius,
-        'rgba(33, 150, 243, 0.2)',
-        true
-      );
-      renderer.drawCircle(
-        hideSpot.position.x,
-        hideSpot.position.y,
-        hideSpot.radius,
-        '#2196F3',
-        false
-      );
+      renderer.ctx.fillStyle = 'rgba(33, 150, 243, 0.2)';
+      renderer.ctx.beginPath();
+      renderer.ctx.arc(hideSpot.position.x, hideSpot.position.y, hideSpot.radius, 0, Math.PI * 2);
+      renderer.ctx.fill();
+      renderer.ctx.strokeStyle = '#2196F3';
+      renderer.ctx.lineWidth = 2;
+      renderer.ctx.beginPath();
+      renderer.ctx.arc(hideSpot.position.x, hideSpot.position.y, hideSpot.radius, 0, Math.PI * 2);
+      renderer.ctx.stroke();
     }
     
     // Render traps
@@ -523,18 +527,20 @@ window.Room = class Room {
       }
       
       if (trap.type === 'laser') {
-        renderer.drawLine(
-          trap.position.x - 20,
-          trap.position.y,
-          trap.position.x + 20,
-          trap.position.y,
-          trapColor,
-          2
-        );
+        renderer.ctx.strokeStyle = trapColor;
+        renderer.ctx.lineWidth = 2;
+        renderer.ctx.beginPath();
+        renderer.ctx.moveTo(trap.position.x - 20, trap.position.y);
+        renderer.ctx.lineTo(trap.position.x + 20, trap.position.y);
+        renderer.ctx.stroke();
       } else {
-        renderer.drawCircle(trap.position.x, trap.position.y, 8, trapColor, true);
+        renderer.ctx.fillStyle = trapColor;
+        renderer.ctx.beginPath();
+        renderer.ctx.arc(trap.position.x, trap.position.y, 8, 0, Math.PI * 2);
+        renderer.ctx.fill();
       }
     }
+
     
     // Render items
     for (const item of this.items) {
@@ -542,22 +548,11 @@ window.Room = class Room {
         if (item.type === 'file') {
           // Draw file as glowing yellow rectangle
           const pulse = Math.sin(Date.now() * 0.003) * 0.2 + 0.8;
-          renderer.drawRect(
-            item.position.x - 8,
-            item.position.y - 8,
-            16,
-            16,
-            `rgba(255, 193, 7, ${pulse})`,
-            true
-          );
-          renderer.drawRect(
-            item.position.x - 8,
-            item.position.y - 8,
-            16,
-            16,
-            '#FFC107',
-            false
-          );
+          renderer.ctx.fillStyle = `rgba(255, 193, 7, ${pulse})`;
+          renderer.ctx.fillRect(item.position.x - 8, item.position.y - 8, 16, 16);
+          renderer.ctx.strokeStyle = '#FFC107';
+          renderer.ctx.lineWidth = 2;
+          renderer.ctx.strokeRect(item.position.x - 8, item.position.y - 8, 16, 16);
         } else if (item.type === 'powerup') {
           // Draw powerup as glowing circle
           let color = '#00BCD4';
@@ -568,21 +563,17 @@ window.Room = class Room {
           }
           
           const pulse = Math.sin(Date.now() * 0.004) * 0.3 + 0.7;
-          renderer.drawCircle(
-            item.position.x,
-            item.position.y,
-            10,
-            color,
-            true
-          );
-          renderer.drawCircle(
-            item.position.x,
-            item.position.y,
-            10 * pulse,
-            `${color}33`,
-            true
-          );
+          renderer.ctx.fillStyle = color;
+          renderer.ctx.beginPath();
+          renderer.ctx.arc(item.position.x, item.position.y, 10, 0, Math.PI * 2);
+          renderer.ctx.fill();
+          
+          renderer.ctx.fillStyle = `${color}33`;
+          renderer.ctx.beginPath();
+          renderer.ctx.arc(item.position.x, item.position.y, 10 * pulse, 0, Math.PI * 2);
+          renderer.ctx.fill();
         }
+
       }
     }
   }
@@ -832,8 +823,10 @@ window.LevelGenerator = class LevelGenerator {
   }
   
   generateLevel(levelNumber) {
-    const rooms = [];
     const gridSize = Math.ceil(Math.sqrt(levelNumber + 5));
+    
+    // Create 2D grid structure
+    const rooms = Array(gridSize).fill(null).map(() => Array(gridSize).fill(null));
     
     // Generate grid of rooms
     for (let y = 0; y < gridSize; y++) {
@@ -845,7 +838,7 @@ window.LevelGenerator = class LevelGenerator {
         const roomType = this.determineRoomType(x, y, gridSize, levelNumber);
         
         const room = new window.Room(roomX, roomY, this.roomWidth, this.roomHeight, roomType);
-        rooms.push(room);
+        rooms[y][x] = room;
       }
     }
     
@@ -861,8 +854,13 @@ window.LevelGenerator = class LevelGenerator {
     // Distribute files across the level
     this.distributeFiles(rooms, levelNumber);
     
-    return rooms;
+    return {
+      rooms: rooms,
+      gridWidth: gridSize,
+      gridHeight: gridSize
+    };
   }
+
   
   determineRoomType(x, y, gridSize, levelNumber) {
     // Special rooms
@@ -899,23 +897,24 @@ window.LevelGenerator = class LevelGenerator {
     // Enhanced grid connection with strategic connections
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        const currentRoom = rooms[y * gridSize + x];
+        const currentRoom = rooms[y][x];
+        if (!currentRoom) continue;
         
         // Always connect to right neighbor (horizontal connections)
-        if (x < gridSize - 1) {
-          const rightRoom = rooms[y * gridSize + (x + 1)];
+        if (x < gridSize - 1 && rooms[y][x + 1]) {
+          const rightRoom = rooms[y][x + 1];
           currentRoom.connectTo(rightRoom);
         }
         
         // Always connect to bottom neighbor (vertical connections)
-        if (y < gridSize - 1) {
-          const bottomRoom = rooms[(y + 1) * gridSize + x];
+        if (y < gridSize - 1 && rooms[y + 1][x]) {
+          const bottomRoom = rooms[y + 1][x];
           currentRoom.connectTo(bottomRoom);
         }
         
         // Add diagonal connections for larger grids to improve flow
-        if (gridSize > 3 && x < gridSize - 1 && y < gridSize - 1) {
-          const diagonalRoom = rooms[(y + 1) * gridSize + (x + 1)];
+        if (gridSize > 3 && x < gridSize - 1 && y < gridSize - 1 && rooms[y + 1][x + 1]) {
+          const diagonalRoom = rooms[y + 1][x + 1];
           if (Math.random() < 0.3) { // 30% chance for diagonal
             currentRoom.connectTo(diagonalRoom);
           }
@@ -923,14 +922,25 @@ window.LevelGenerator = class LevelGenerator {
       }
     }
   }
+
   
   validateConnectivity(rooms) {
-    if (rooms.length === 0) return false;
+    // Flatten the 2D array for easier processing
+    const flatRooms = [];
+    for (let y = 0; y < rooms.length; y++) {
+      for (let x = 0; x < rooms[y].length; x++) {
+        if (rooms[y][x]) {
+          flatRooms.push(rooms[y][x]);
+        }
+      }
+    }
+    
+    if (flatRooms.length === 0) return false;
     
     // Use BFS to check if all rooms are reachable from the entry room
     const visited = new Set();
-    const queue = [rooms[0]]; // Start with entry room
-    visited.add(rooms[0]);
+    const queue = [flatRooms[0]]; // Start with entry room
+    visited.add(flatRooms[0]);
     
     while (queue.length > 0) {
       const current = queue.shift();
@@ -944,14 +954,27 @@ window.LevelGenerator = class LevelGenerator {
     }
     
     // All rooms should be visited
-    return visited.size === rooms.length;
+    return visited.size === flatRooms.length;
   }
+
   
   repairConnectivity(rooms, gridSize) {
+    // Flatten 2D array for easier processing
+    const flatRooms = [];
+    for (let y = 0; y < rooms.length; y++) {
+      for (let x = 0; x < rooms[y].length; x++) {
+        if (rooms[y][x]) {
+          flatRooms.push(rooms[y][x]);
+        }
+      }
+    }
+    
+    if (flatRooms.length === 0) return;
+    
     // Find disconnected rooms and connect them
     const visited = new Set();
-    const queue = [rooms[0]];
-    visited.add(rooms[0]);
+    const queue = [flatRooms[0]];
+    visited.add(flatRooms[0]);
     
     // First BFS to find connected component
     while (queue.length > 0) {
@@ -966,7 +989,7 @@ window.LevelGenerator = class LevelGenerator {
     }
     
     // Connect disconnected rooms to nearest connected room
-    for (const room of rooms) {
+    for (const room of flatRooms) {
       if (!visited.has(room)) {
         // Find nearest connected room
         let nearestRoom = null;
@@ -992,16 +1015,26 @@ window.LevelGenerator = class LevelGenerator {
       }
     }
   }
+
   
   distributeFiles(rooms, levelNumber) {
     // File distribution is now handled by room content generation
     // This method now ensures the 10-file minimum across the level
-
+    
+    // Flatten 2D array for easier processing
+    const flatRooms = [];
+    for (let y = 0; y < rooms.length; y++) {
+      for (let x = 0; x < rooms[y].length; x++) {
+        if (rooms[y][x]) {
+          flatRooms.push(rooms[y][x]);
+        }
+      }
+    }
     
     let totalFiles = 0;
     
     // Count files spawned by individual rooms
-    for (const room of rooms) {
+    for (const room of flatRooms) {
       totalFiles += room.items.filter(item => item.type === 'file').length;
     }
     
@@ -1012,11 +1045,11 @@ window.LevelGenerator = class LevelGenerator {
       console.log(`Adding ${filesNeeded} additional files to meet 10-file minimum`);
       
       // Add remaining files to file rooms first, then other rooms
-      const fileRooms = rooms.filter(room => 
+      const fileRooms = flatRooms.filter(room => 
         room.type === window.GAME_CONSTANTS.ROOM_TYPES.FILE_ROOM
       );
       
-      const availableRooms = fileRooms.length > 0 ? fileRooms : rooms;
+      const availableRooms = fileRooms.length > 0 ? fileRooms : flatRooms;
       
       for (let i = 0; i < filesNeeded; i++) {
         const room = availableRooms[i % availableRooms.length];
@@ -1039,12 +1072,13 @@ window.LevelGenerator = class LevelGenerator {
     
     // Final count
     totalFiles = 0;
-    for (const room of rooms) {
+    for (const room of flatRooms) {
       totalFiles += room.items.filter(item => item.type === 'file').length;
     }
     
-    console.log(`Level ${levelNumber} has ${totalFiles} files across ${rooms.length} rooms`);
+    console.log(`Level ${levelNumber} has ${totalFiles} files across ${flatRooms.length} rooms`);
   }
+
 };
 
 window.Level = class Level {
