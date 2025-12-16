@@ -226,7 +226,14 @@ window.EpsteinGame = class {
     // Create player instance
     if (window.Player) {
       try {
+        // Start player at center - rooms will be positioned around them
         window.game.player = new window.Player(constants.CANVAS_WIDTH / 2, constants.CANVAS_HEIGHT / 2);
+        console.log(`Player created at (${window.game.player.position.x}, ${window.game.player.position.y})`);
+        
+        // Set camera to player position immediately
+        if (this.systems.renderer) {
+          this.systems.renderer.setCameraPosition(window.game.player.position.x, window.game.player.position.y, true);
+        }
         
         // Add player to physics system with error handling
         if (this.systems.physics && this.systems.physics.addEntity) {
@@ -238,6 +245,8 @@ window.EpsteinGame = class {
         console.error('Player creation failed:', error.message);
       }
     }
+
+
 
 
     // Initialize stealth system
@@ -451,8 +460,13 @@ window.EpsteinGame = class {
         window.game.player.update(dt);
         
         // Update camera to follow player
-        renderer.setCameraPosition(window.game.player.position.x, window.game.player.position.y);
+        const playerX = window.game.player.position.x;
+        const playerY = window.game.player.position.y;
+        renderer.setCameraPosition(playerX, playerY);
+        console.log(`Camera following player: Player at (${playerX}, ${playerY}), Camera at (${renderer.camera.x}, ${renderer.camera.y})`);
       }
+
+
 
       // Update systems
       renderer.update(dt);
@@ -514,8 +528,12 @@ window.EpsteinGame = class {
       // Render current room
       const currentRoom = window.game.world.getCurrentRoom();
       if (currentRoom && currentRoom.render) {
+        console.log(`Rendering current room: ${currentRoom.type} at (${currentRoom.x}, ${currentRoom.y}) size ${currentRoom.width}x${currentRoom.height}`);
         currentRoom.render(renderer);
+      } else {
+        console.log(`No current room to render! currentRoom: ${currentRoom}`);
       }
+
 
       // Add entities to entity layer
       for (const entity of window.game.entities) {

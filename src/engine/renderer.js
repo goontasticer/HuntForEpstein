@@ -22,8 +22,9 @@ window.Renderer = class Renderer {
       targetZoom: 1
     };
     
-    // Initialize camera position to center
-    this.setCameraPosition(0, 0, true);
+    // Initialize camera position to center of canvas
+    this.setCameraPosition(this.canvas.width / 2, this.canvas.height / 2, true);
+
 
 
     
@@ -154,17 +155,18 @@ window.Renderer = class Renderer {
   
   screenToWorld(screenX, screenY) {
     return {
-      x: (screenX / this.camera.zoom) + this.camera.x,
-      y: (screenY / this.camera.zoom) + this.camera.y
+      x: (screenX - this.canvas.width / 2) / this.camera.zoom + this.camera.x,
+      y: (screenY - this.canvas.height / 2) / this.camera.zoom + this.camera.y
     };
   }
   
   worldToScreen(worldX, worldY) {
     return {
-      x: worldX * this.camera.zoom,
-      y: worldY * this.camera.zoom
+      x: (worldX - this.camera.x) * this.camera.zoom + this.canvas.width / 2,
+      y: (worldY - this.camera.y) * this.camera.zoom + this.canvas.height / 2
     };
   }
+
 
   
   // ==================== CULLING MANAGEMENT ====================
@@ -318,9 +320,12 @@ window.Renderer = class Renderer {
     this.ctx.fillStyle = window.GAME_CONSTANTS.COLORS.BACKGROUND;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Apply camera transform and screen shake
+    // Center canvas view at (0,0) by default, then apply camera offset
+    this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
     this.ctx.translate(-this.camera.x * this.camera.zoom, -this.camera.y * this.camera.zoom);
+    this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
     this.ctx.translate(this.effects.screenShake.offsetX, this.effects.screenShake.offsetY);
+
 
     
     // Render layers in order

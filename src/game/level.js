@@ -828,11 +828,21 @@ window.LevelGenerator = class LevelGenerator {
     // Create 2D grid structure
     const rooms = Array(gridSize).fill(null).map(() => Array(gridSize).fill(null));
     
+    // Calculate offset to center the grid around player starting position
+    const playerStartX = window.GAME_CONSTANTS.CANVAS_WIDTH / 2;
+    const playerStartY = window.GAME_CONSTANTS.CANVAS_HEIGHT / 2;
+    const gridPixelWidth = gridSize * this.roomWidth;
+    const gridPixelHeight = gridSize * this.roomHeight;
+    const offsetX = playerStartX - (gridPixelWidth / 2) + (this.roomWidth / 2);
+    const offsetY = playerStartY - (gridPixelHeight / 2) + (this.roomHeight / 2);
+    
+    console.log(`Centering ${gridSize}x${gridSize} room grid around player at (${playerStartX}, ${playerStartY}) with offset (${offsetX}, ${offsetY})`);
+    
     // Generate grid of rooms
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        const roomX = x * this.roomWidth;
-        const roomY = y * this.roomHeight;
+        const roomX = x * this.roomWidth + offsetX;
+        const roomY = y * this.roomHeight + offsetY;
         
         // Determine room type
         const roomType = this.determineRoomType(x, y, gridSize, levelNumber);
@@ -860,6 +870,7 @@ window.LevelGenerator = class LevelGenerator {
       gridHeight: gridSize
     };
   }
+
 
   
   determineRoomType(x, y, gridSize, levelNumber) {
