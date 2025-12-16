@@ -3,7 +3,7 @@ window.FILE_MANIFEST = window.FILE_MANIFEST || [];
 window.FILE_MANIFEST.push({
   name: 'src/game/main.js',
   exports: ['EpsteinGame', 'initGame', 'startGame', 'restartGame'],
-  dependencies: ['GAME_CONSTANTS', 'InputHandler', 'GameLoop', 'Renderer', 'PhysicsEngine', 'GameWorld', 'GameStateManager', 'UISystem', 'HUD', 'MenuManager', 'PermadeathManager', 'MakkoEngine']
+  dependencies: ['GAME_CONSTANTS', 'Input', 'GameLoop', 'Renderer', 'PhysicsEngine', 'GameWorld', 'GameStateManager', 'UISystem', 'HUD', 'MenuManager', 'PermadeathManager', 'MakkoEngine']
 });
 
 /**
@@ -114,7 +114,7 @@ window.EpsteinGame = class {
   validateDependencies() {
     const requiredSystems = [
       'GAME_CONSTANTS',
-      'InputHandler', 
+      'Input', 
       'GameLoop',
       'Renderer',
       'PhysicsEngine',
@@ -134,7 +134,7 @@ window.EpsteinGame = class {
     // Store system references
     this.systems = {
       constants: window.GAME_CONSTANTS,
-      input: window.InputHandler,
+      input: window.Input,
       loop: window.GameLoop,
       renderer: window.Renderer,
       physics: window.PhysicsEngine,
@@ -404,7 +404,7 @@ window.EpsteinGame = class {
       this.checkGameState();
 
       // Debug input
-      if (window.gameInput && window.gameInput.isBindingPressed('debug')) {
+      if (window.Input && window.Input.isBindingPressed('debug')) {
         window.game.ui.showDebug = !window.game.ui.showDebug;
       }
     } catch (error) {
@@ -534,7 +534,7 @@ window.EpsteinGame = class {
   renderDebugInfo(ctx) {
     try {
       const perf = this.systems.gameLoop.getPerformanceInfo();
-      const input = window.gameInput.getDebugInfo();
+      const input = window.Input.getDebugInfo();
 
       this.systems.renderer.drawUIText(`FPS: ${perf.fps}`, 10, 10, '#0f0');
       this.systems.renderer.drawUIText(`Frame: ${perf.frameCount}`, 10, 25, '#0f0');
