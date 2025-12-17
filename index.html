@@ -73,17 +73,36 @@
     <script src="src/core/loop.js"></script>
 
     <!-- Level 3: Engine (depends on utils + core) -->
+    <script src="src/engine/renderer-camera.js"></script>
+    <script src="src/engine/renderer-effects.js"></script>
+    <script src="src/engine/renderer-layers.js"></script>
     <script src="src/engine/renderer.js"></script>
     <script src="src/engine/physics.js"></script>
 
+
     <!-- Level 4: Game entities (depend on engine) -->
+    <script src="src/game/player-movement.js"></script>
+    <script src="src/game/player-stealth.js"></script>
+    <script src="src/game/player-interaction.js"></script>
+    <script src="src/game/player-rendering.js"></script>
     <script src="src/game/player.js"></script>
+    <script src="src/game/level-furniture.js"></script>
+    <script src="src/game/level-room.js"></script>
+    <script src="src/game/level-generator.js"></script>
     <script src="src/game/level.js"></script>
+    <script src="src/game/entities-enemy.js"></script>
+    <script src="src/game/entities-collectibles.js"></script>
+    <script src="src/game/entities-powerups.js"></script>
+
+    <script src="src/game/entities-traps.js"></script>
     <script src="src/game/entities.js"></script>
     <script src="src/game/stealth-system.js"></script>
     <script src="src/game/trapdoor.js"></script>
     <script src="src/game/camera.js"></script>
     <script src="src/game/world.js"></script>
+
+
+
 
     <!-- Level 5: UI Systems (depend on game entities) -->
     <script src="src/ui/gamestate.js"></script>
@@ -93,6 +112,10 @@
     <script src="src/ui/permadeath.js"></script>
 
     <!-- Level 6: Game loop and initialization (depends on all) -->
+    <script src="src/game/game-asset-loader.js"></script>
+    <script src="src/game/game-setup.js"></script>
+    <script src="src/game/game-coordinator.js"></script>
     <script src="src/game/main.js"></script>
+
 </body>
 </html>
