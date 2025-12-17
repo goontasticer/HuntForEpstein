@@ -13,6 +13,10 @@ window.GameLoop = {
     animationId: null,
     lastTime: 0,
     
+    // Canvas context cache
+    canvas: null,
+    ctx: null,
+    
     // Delta time settings
     minFrameTime: 0.001,  // Minimum dt to prevent division by zero (1ms)
     maxFrameTime: 0.25,   // Maximum dt to prevent "spiral of death" (250ms)
@@ -24,6 +28,7 @@ window.GameLoop = {
     fpsUpdateInterval: 1.0, // Update FPS display every second
 };
 
+
 /**
  * Initialize the game loop system
  */
@@ -34,8 +39,21 @@ window.GameLoop.init = function() {
     // Make dt globally available
     window.dt = 0;
     
+    // Cache canvas context if game is already initialized
+    if (window.epsteinGame && window.epsteinGame.canvas) {
+        this.canvas = window.epsteinGame.canvas;
+        this.ctx = this.canvas.getContext('2d');
+        if (!this.ctx) {
+            console.error('GameLoop: Failed to get canvas context during init');
+        } else {
+            console.log('GameLoop: Successfully cached canvas context during init');
+        }
+    }
+
+    
     console.log('GameLoop: Initialized');
 };
+
 
 /**
  * Main game loop function - called every frame via requestAnimationFrame
@@ -89,27 +107,52 @@ window.GameLoop.updateGame = function(dt) {
  * Render the current frame
  */
 window.GameLoop.render = function() {
-    // Get canvas and context
-    if (!window.epsteinGame || !window.epsteinGame.canvas) {
-        return;
+    // Initialize canvas context if not cached
+    if (!this.ctx) {
+        if (!window.epsteinGame || !window.epsteinGame.canvas) {
+            console.log('No epsteinGame or canvas - skipping render');
+            return;
+        }
+        
+        this.canvas = window.epsteinGame.canvas;
+        this.ctx = this.canvas.getContext('2d');
+        
+        if (!this.ctx) {
+            console.log('Failed to get canvas context - skipping render');
+            return;
+        } else {
+            console.log('GameLoop: Canvas context created and cached');
+        }
     }
     
-    const canvas = window.epsteinGame.canvas;
-    const ctx = canvas.getContext('2d');
+    // Use cached context
+    const ctx = this.ctx;
+    const canvas = this.canvas;
     
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Render game
     if (window.renderGame && typeof window.renderGame === 'function') {
-        window.renderGame(ctx);
+        try {
+            window.renderGame(ctx);
+        } catch (error) {
+            console.error('renderGame error:', error.message, error.stack);
+        }
     }
     
     // Render UI
     if (window.renderUI && typeof window.renderUI === 'function') {
-        window.renderUI(ctx);
+        try {
+            window.renderUI(ctx);
+        } catch (error) {
+            console.error('renderUI error:', error.message, error.stack);
+        }
     }
 };
+
+
+
 
 
 /**
@@ -134,6 +177,8 @@ window.GameLoop.updateFrameStats = function(currentTime) {
  * Start the game loop
  */
 window.GameLoop.start = function() {
+    console.log('GameLoop.start() called');
+    
     if (this.isRunning) {
         console.warn('GameLoop: Already running');
         return;
@@ -146,9 +191,13 @@ window.GameLoop.start = function() {
     this.frameCount = 0;
     this.fpsUpdateTime = this.lastTime;
     
+    console.log('GameLoop: About to call requestAnimationFrame');
+    
     // Start the loop
     this.animationId = requestAnimationFrame(this.gameLoop.bind(this));
+    console.log('GameLoop: requestAnimationFrame called, animationId:', this.animationId);
 };
+
 
 /**
  * Stop the game loop
@@ -212,6 +261,10 @@ window.GameLoop.reset = function() {
     this.fps = 0;
     this.fpsUpdateTime = 0;
     
+    // Clear canvas context cache
+    this.canvas = null;
+    this.ctx = null;
+    
     if (this.animationId !== null) {
         cancelAnimationFrame(this.animationId);
         this.animationId = null;
@@ -219,6 +272,7 @@ window.GameLoop.reset = function() {
     
     console.log('GameLoop: Reset');
 };
+
 
 // Initialize the game loop system
 window.GameLoop.init();

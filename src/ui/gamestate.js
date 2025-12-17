@@ -116,12 +116,15 @@ window.GameStateManager = class GameStateManager {
   
   // Game flow control
   startGame() {
+    console.log('GameStateManager.startGame() called');
     this.setState(window.GAME_CONSTANTS.GAME_STATES.PLAYING, {
       level: 1,
       score: 0,
       lives: 1
     });
+    console.log('GameStateManager.startGame() completed');
   }
+
   
   pauseGame() {
     if (this.canPause()) {

@@ -11,19 +11,15 @@ window.Renderer = class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     
-    // Rendering properties
+    // Simple camera system - camera follows player
     this.camera = {
       x: 0,
       y: 0,
-      targetX: 0,
-      targetY: 0,
-      smoothness: 0.1,
-      zoom: 1,
-      targetZoom: 1
+      zoom: 1
     };
     
-    // Initialize camera position to center of canvas
-    this.setCameraPosition(this.canvas.width / 2, this.canvas.height / 2, true);
+    console.log('Camera system initialized');
+
 
 
 
@@ -107,43 +103,18 @@ window.Renderer = class Renderer {
   // ==================== CAMERA MANAGEMENT ====================
   
   setCameraPosition(x, y, immediate = false) {
-    this.camera.targetX = x;
-    this.camera.targetY = y;
-    
-    if (immediate) {
-      this.camera.x = this.camera.targetX;
-      this.camera.y = this.camera.targetY;
-    }
+    this.camera.x = x;
+    this.camera.y = y;
+    console.log(`Camera set to (${x}, ${y})`);
   }
+
 
   
   updateCamera(dt) {
-    // Smooth camera movement
-    const smoothness = this.camera.smoothness;
-    this.camera.x = window.MathUtils.smoothValue(
-      this.camera.x, 
-      this.camera.targetX, 
-      smoothness, 
-      dt
-    );
-    this.camera.y = window.MathUtils.smoothValue(
-      this.camera.y, 
-      this.camera.targetY, 
-      smoothness, 
-      dt
-    );
-    
-    // Smooth zoom
-    this.camera.zoom = window.MathUtils.smoothValue(
-      this.camera.zoom,
-      this.camera.targetZoom,
-      0.2,
-      dt
-    );
-    
-    // Update culling bounds
+    // Simple camera update - just update bounds
     this.updateCullingBounds();
   }
+
   
   setCameraZoom(zoom, immediate = false) {
     this.camera.targetZoom = window.MathUtils.clamp(zoom, 0.5, 2.0);
@@ -155,17 +126,18 @@ window.Renderer = class Renderer {
   
   screenToWorld(screenX, screenY) {
     return {
-      x: (screenX - this.canvas.width / 2) / this.camera.zoom + this.camera.x,
-      y: (screenY - this.canvas.height / 2) / this.camera.zoom + this.camera.y
+      x: screenX + this.camera.x - this.canvas.width / 2,
+      y: screenY + this.camera.y - this.canvas.height / 2
     };
   }
   
   worldToScreen(worldX, worldY) {
     return {
-      x: (worldX - this.camera.x) * this.camera.zoom + this.canvas.width / 2,
-      y: (worldY - this.camera.y) * this.camera.zoom + this.canvas.height / 2
+      x: worldX - this.camera.x + this.canvas.width / 2,
+      y: worldY - this.camera.y + this.canvas.height / 2
     };
   }
+
 
 
   
@@ -320,11 +292,20 @@ window.Renderer = class Renderer {
     this.ctx.fillStyle = window.GAME_CONSTANTS.COLORS.BACKGROUND;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Center canvas view at (0,0) by default, then apply camera offset
-    this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
-    this.ctx.translate(-this.camera.x * this.camera.zoom, -this.camera.y * this.camera.zoom);
-    this.ctx.translate(-this.canvas.width / 2, -this.canvas.height / 2);
+    // Debug: Draw camera position
+    this.ctx.fillStyle = '#ff0000';
+    this.ctx.fillRect(this.canvas.width / 2 - 5, this.canvas.height / 2 - 5, 10, 10);
+    
+    // Apply camera transform - center on camera position
+    this.ctx.translate(this.canvas.width / 2 - this.camera.x, this.canvas.height / 2 - this.camera.y);
     this.ctx.translate(this.effects.screenShake.offsetX, this.effects.screenShake.offsetY);
+    
+    // Debug: Draw test rectangle at (0,0) in world space
+    this.ctx.fillStyle = '#00ff00';
+    this.ctx.fillRect(0, 0, 100, 100);
+
+
+
 
 
     

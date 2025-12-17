@@ -18,9 +18,11 @@ window.EpsteinGame = class {
     this.hasAssetError = false;
     this.systems = {};
     this.canvas = null;
+    this.ctx = null;
     this.loadingProgress = 0;
     this.loadingTotal = 0;
   }
+
 
   /**
    * Initialize the complete game system with MakkoEngine asset loading
@@ -34,8 +36,17 @@ window.EpsteinGame = class {
     }
 
     this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    
+    if (!this.ctx) {
+        console.error('EpsteinGame: Failed to get canvas context during initialization');
+        throw new Error('Failed to initialize canvas context');
+    } else {
+        console.log('EpsteinGame: Canvas context cached successfully');
+    }
     
     try {
+
       // Phase 1: Load MakkoEngine assets with graceful error handling
       await this.loadAssets();
       
@@ -57,6 +68,7 @@ window.EpsteinGame = class {
       throw error;
     }
   }
+
 
   /**
    * Load MakkoEngine sprite assets with progress tracking and graceful error handling
@@ -214,11 +226,22 @@ window.EpsteinGame = class {
 
     // Auto-start the game after initialization
     setTimeout(() => {
+      console.log('Auto-start timeout triggered');
       if (this.systems.gameState) {
+        console.log('Calling gameState.startGame()');
         this.systems.gameState.startGame();
         console.log('Game auto-started to PLAYING state');
+      } else {
+        console.log('No gameState system available');
+      }
+      
+      // Manually start game loop as fallback
+      if (this.systems.loop && !this.systems.loop.isRunning) {
+        console.log('Manually starting game loop');
+        this.systems.loop.start();
       }
     }, 500); // Small delay to ensure everything is loaded
+
 
 
 
@@ -690,8 +713,10 @@ window.EpsteinGame = class {
     const percentage = total > 0 ? Math.round((loaded / total) * 100) : 0;
     
     try {
-      // Clear canvas and show loading
-      const ctx = this.canvas.getContext('2d');
+      // Use cached context if available, otherwise create it
+      const ctx = this.ctx || (this.canvas ? this.canvas.getContext('2d') : null);
+      if (!ctx) return;
+      
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       
@@ -713,13 +738,17 @@ window.EpsteinGame = class {
     }
   }
 
+
   /**
    * Show error screen
    * @param {string} message - Error message to display
    */
   showErrorScreen(message) {
     try {
-      const ctx = this.canvas.getContext('2d');
+      // Use cached context if available, otherwise create it
+      const ctx = this.ctx || (this.canvas ? this.canvas.getContext('2d') : null);
+      if (!ctx) return;
+      
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       
@@ -745,6 +774,7 @@ window.EpsteinGame = class {
       console.error('Error screen display failed:', error.message);
     }
   }
+
 
   /**
    * Get system statistics
