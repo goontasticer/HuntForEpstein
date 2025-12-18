@@ -283,5 +283,5 @@ window.GameStateManager = class GameStateManager {
   }
 };
 
-// Create global instance
-window.gameState = new window.GameStateManager();
+// Create global instance - ensure it's available immediately
+window.gameState = window.gameState || new window.GameStateManager();

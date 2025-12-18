@@ -132,25 +132,29 @@ window.GameLoop.render = function() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Render game
-    if (window.renderGame && typeof window.renderGame === 'function') {
-        try {
-            window.renderGame(ctx);
-        } catch (error) {
-            console.error('renderGame error:', error.message, error.stack);
-        }
-    }
-    
-    // Render UI
+    // Always render UI first (menus overlay everything)
+    console.log('GameLoop: About to call renderUI');
     if (window.renderUI && typeof window.renderUI === 'function') {
-        try {
-            window.renderUI(ctx);
-        } catch (error) {
-            console.error('renderUI error:', error.message, error.stack);
-        }
+      try {
+        window.renderUI(ctx);
+        console.log('GameLoop: renderUI completed successfully');
+      } catch (error) {
+        console.error('renderUI error:', error.message, error.stack);
+      }
+    } else {
+      console.log('GameLoop: renderUI function not available');
+    }
+
+    
+    // Render game (underneath UI)
+    if (window.renderGame && typeof window.renderGame === 'function') {
+      try {
+        window.renderGame(ctx);
+      } catch (error) {
+        console.error('renderGame error:', error.message, error.stack);
+      }
     }
 };
-
 
 
 

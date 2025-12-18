@@ -133,30 +133,34 @@ window.Renderer = class Renderer {
     this.ctx.fillStyle = window.GAME_CONSTANTS.COLORS.BACKGROUND;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Debug: Draw camera position
-    this.ctx.fillStyle = '#ff0000';
-    this.ctx.fillRect(this.canvas.width / 2 - 5, this.canvas.height / 2 - 5, 10, 10);
-    
-    // Apply camera transform - center on camera position
-    this.ctx.translate(this.canvas.width / 2 - this.camera.camera.x, this.canvas.height / 2 - this.camera.camera.y);
-    
-    // Apply screen shake
-    const shakeOffsets = this.effects.getScreenShakeOffsets();
-    this.ctx.translate(shakeOffsets.offsetX, shakeOffsets.offsetY);
-    
-    // Debug: Draw test rectangle at (0,0) in world space
-    this.ctx.fillStyle = '#00ff00';
-    this.ctx.fillRect(0, 0, 100, 100);
-    
-    // Render layers
-    this.layers.renderAllLayers(this.ctx);
-    
-    // Render visual effects (these go on top of everything)
-    this.effects.renderEffects(this.ctx);
+    // Only render game world if not in menu
+    if (!window.gameState || !window.gameState.isState('menu')) {
+      // Debug: Draw camera position
+      this.ctx.fillStyle = '#ff0000';
+      this.ctx.fillRect(this.canvas.width / 2 - 5, this.canvas.height / 2 - 5, 10, 10);
+      
+      // Apply camera transform - center on camera position
+      this.ctx.translate(this.canvas.width / 2 - this.camera.camera.x, this.canvas.height / 2 - this.camera.camera.y);
+      
+      // Apply screen shake
+      const shakeOffsets = this.effects.getScreenShakeOffsets();
+      this.ctx.translate(shakeOffsets.offsetX, shakeOffsets.offsetY);
+      
+      // Debug: Draw test rectangle at (0,0) in world space
+      this.ctx.fillStyle = '#00ff00';
+      this.ctx.fillRect(0, 0, 100, 100);
+      
+      // Render layers
+      this.layers.renderAllLayers(this.ctx);
+      
+      // Render visual effects (these go on top of everything)
+      this.effects.renderEffects(this.ctx);
+    }
     
     // Restore context state
     this.ctx.restore();
   }
+
   
   // ==================== PRIMITIVE DRAWING HELPERS ====================
   

@@ -630,5 +630,5 @@ window.HUD = class HUD {
   }
 };
 
-// Create global instance
-window.hud = new window.HUD();
+// Create global instance - ensure it's available immediately
+window.hud = window.hud || new window.HUD();

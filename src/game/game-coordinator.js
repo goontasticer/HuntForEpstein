@@ -68,12 +68,17 @@ window.GameCoordinator = class GameCoordinator {
     }
 
     const systems = this.gameSetup.getSystems();
+    
+    // Always start the game loop - it should handle menu rendering
+    systems.loop.start();
+    
     if (systems.gameState.isState('menu')) {
-      // Start the game loop but stay in menu state until user selects start
-      systems.loop.start();
       console.log('Game started - showing main menu');
+      // Force menu state trigger
+      systems.gameState.setState(window.GAME_CONSTANTS.GAME_STATES.MENU);
     }
   }
+
   
   /**
    * Restart the game with fresh state

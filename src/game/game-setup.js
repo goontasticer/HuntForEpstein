@@ -145,17 +145,23 @@ window.GameSetup = class GameSetup {
       throw error;
     }
 
-    // Initialize UI systems
-    this.systems.gameState = new gameState();
-    this.systems.ui = new ui(canvas);
-    this.systems.hud = new hud();
-    this.systems.menus = new menus();
-    this.systems.permadeath = new permadeath();
+    // Initialize UI systems - use existing global instances
+    this.systems.gameState = window.gameState;
+    this.systems.ui = window.uiSystem;
+    this.systems.hud = window.hud;
+    this.systems.menus = window.menuManager;
+    this.systems.permadeath = window.permadeathManager;
+    
+    console.log('GameSetup: Using existing global UI instances');
+
 
     // Set up global render functions
     window.updateGame = this.updateGame.bind(this);
     window.renderGame = this.renderGame.bind(this);
     window.renderUI = this.renderUI.bind(this);
+    
+    console.log('GameSetup: Global render functions set up');
+
   }
   
   /**
@@ -166,8 +172,14 @@ window.GameSetup = class GameSetup {
 
     // Set up game state callbacks
     gameState.onStateEnter('menu', () => {
+      console.log('GameSetup: Entering menu state - showing main menu');
       ui.showScreen('main');
+      // Also activate menu manager for legacy compatibility
+      if (window.menuManager) {
+        window.menuManager.showMenu('main');
+      }
     });
+
 
     gameState.onStateEnter('playing', () => {
       ui.showScreen('hud');
@@ -365,12 +377,14 @@ window.GameSetup = class GameSetup {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   renderUI(ctx) {
+    console.log('GameSetup.renderUI() called');
     try {
       this.systems.ui.render(ctx);
     } catch (error) {
       console.error('UI render error:', error.message);
     }
   }
+
   
   /**
    * Check game state conditions and handle transitions

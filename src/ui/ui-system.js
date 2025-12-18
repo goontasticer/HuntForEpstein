@@ -259,6 +259,8 @@ window.UISystem = class UISystem {
   
   // Render method
   render(ctx) {
+    console.log('UISystem.render() called, activeScreens:', Array.from(this.activeScreens));
+    
     // Render visible layers in order
     for (const layer of this.layers) {
       if (!layer.visible) continue;
@@ -266,8 +268,11 @@ window.UISystem = class UISystem {
       this.renderLayer(ctx, layer);
     }
   }
+
   
   renderLayer(ctx, layer) {
+    console.log(`renderLayer() called for layer: ${layer.name}, visible: ${layer.visible}`);
+    
     switch (layer.name) {
       case 'background':
         this.renderBackground(ctx);
@@ -279,6 +284,7 @@ window.UISystem = class UISystem {
         this.renderNotifications(ctx);
         break;
       case 'menus':
+        console.log('renderMenus() being called');
         this.renderMenus(ctx);
         break;
       case 'overlay':
@@ -286,6 +292,7 @@ window.UISystem = class UISystem {
         break;
     }
   }
+
   
   renderBackground(ctx) {
     // Render any background UI elements
@@ -331,8 +338,12 @@ window.UISystem = class UISystem {
   
   renderMenus(ctx) {
     // Render active menu screens
-    for (const screenName of this.activeScreens) {
-      if (window[screenName + 'Screen'] && window[screenName + 'Screen'].render) {
+    const activeScreens = ['main', 'pause', 'gameover', 'victory'];
+    for (const screenName of activeScreens) {
+      const isActive = this.activeScreens.has(screenName) || 
+                      (screenName === 'main' && window.gameState && window.gameState.isState('menu'));
+      
+      if (isActive && window[screenName + 'Screen'] && window[screenName + 'Screen'].render) {
         // Apply transition effects
         const transition = this.getScreenTransition(screenName);
         this.applyTransitionEffects(ctx, transition);
@@ -344,6 +355,7 @@ window.UISystem = class UISystem {
       }
     }
   }
+
   
   renderOverlay(ctx) {
     // Render any overlay effects (like fade transitions)
@@ -418,5 +430,5 @@ window.UISystem = class UISystem {
   }
 };
 
-// Create global instance
-window.uiSystem = new window.UISystem();
+// Create global instance - ensure it's available immediately
+window.uiSystem = window.uiSystem || new window.UISystem();

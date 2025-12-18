@@ -397,6 +397,7 @@ window.MenuManager = class MenuManager {
   
   // Render methods
   renderMainMenu(ctx) {
+    console.log('renderMainMenu() called - drawing main menu');
     const centerX = window.GAME_CONSTANTS.CANVAS_WIDTH / 2;
     const centerY = window.GAME_CONSTANTS.CANVAS_HEIGHT / 2;
     
@@ -405,6 +406,7 @@ window.MenuManager = class MenuManager {
     this.renderMenuItems(ctx, centerX, centerY);
     this.renderMenuFooter(ctx);
   }
+
   
   renderPauseMenu(ctx) {
     const centerX = window.GAME_CONSTANTS.CANVAS_WIDTH / 2;
@@ -591,5 +593,5 @@ window.MenuManager = class MenuManager {
   }
 };
 
-// Create global instance
-window.menuManager = new window.MenuManager();
+// Create global instance - ensure it's available immediately
+window.menuManager = window.menuManager || new window.MenuManager();
