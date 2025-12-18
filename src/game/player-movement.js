@@ -17,6 +17,14 @@ window.PlayerMovement = class PlayerMovement {
     this.isSprinting = false;
     this.facing = 'right';
     
+    // Jump state
+    this.isGrounded = false;
+    this.isJumping = false;
+    this.jumpPower = -400; // Negative for upward velocity
+    this.gravity = 1200; // Downward acceleration
+    this.fallSpeed = 500; // Maximum falling speed
+
+    
     // Sprint mechanics
     this.canSprint = true;
     this.sprintDuration = 2000; // 2 seconds
@@ -91,6 +99,20 @@ window.PlayerMovement = class PlayerMovement {
     } else {
       this.isMoving = false;
     }
+    
+    // Handle jump input
+    if (window.Input.isActionPressed('jump') && this.isGrounded && !this.isJumping) {
+      this.velocity.y = this.jumpPower;
+      this.isJumping = true;
+      this.isGrounded = false;
+    }
+    
+    // Apply gravity to vertical velocity
+    if (!this.isGrounded) {
+      this.velocity.y += this.gravity * dt;
+      this.velocity.y = Math.min(this.velocity.y, this.fallSpeed);
+    }
+
   }
   
   /**
@@ -103,14 +125,29 @@ window.PlayerMovement = class PlayerMovement {
     position.x += this.velocity.x * dt;
     position.y += this.velocity.y * dt;
     
-    // Apply friction
+    // Apply friction only to horizontal movement
     this.velocity.x *= Math.pow(0.9, dt * 60); // Frame-independent friction
-    this.velocity.y *= Math.pow(0.9, dt * 60);
     
-    // Stop very small movement
+    // Don't apply friction to vertical movement (gravity handles it)
+    // Stop very small horizontal movement
     if (Math.abs(this.velocity.x) < 0.1) this.velocity.x = 0;
-    if (Math.abs(this.velocity.y) < 0.1) this.velocity.y = 0;
   }
+  
+  /**
+   * Set grounded state (called by collision system)
+   * @param {boolean} grounded - Whether player is on ground
+   */
+  setGrounded(grounded) {
+    if (grounded && !this.isGrounded) {
+      // Just landed
+      this.isGrounded = true;
+      this.isJumping = false;
+      this.velocity.y = 0;
+    } else if (!grounded) {
+      this.isGrounded = false;
+    }
+  }
+
   
   /**
    * Apply power-up effects to movement
@@ -152,7 +189,12 @@ window.PlayerMovement = class PlayerMovement {
     this.canSprint = true;
     this.lastSprintTime = 0;
     this.speed = window.GAME_CONSTANTS.PLAYER_SPEED;
+    
+    // Reset jump state
+    this.isGrounded = false;
+    this.isJumping = false;
   }
+
   
   /**
    * Get movement state for debugging
@@ -166,7 +208,10 @@ window.PlayerMovement = class PlayerMovement {
       isSprinting: this.isSprinting,
       facing: this.facing,
       canSprint: this.canSprint,
-      sprintTimeLeft: Math.max(0, this.sprintDuration - (Date.now() - this.lastSprintTime))
+      sprintTimeLeft: Math.max(0, this.sprintDuration - (Date.now() - this.lastSprintTime)),
+      isGrounded: this.isGrounded,
+      isJumping: this.isJumping
     };
   }
+
 };

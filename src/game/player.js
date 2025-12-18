@@ -31,6 +31,10 @@ window.Player = class Player {
       friction: 0.15
     };
     
+    // Make movement accessible to physics system
+    this.movement = this.movement; // Reference for physics system
+
+    
     // State
     this.state = window.GAME_CONSTANTS.PLAYER_STATES.NORMAL;
     this.isCaught = false;
@@ -85,6 +89,12 @@ window.Player = class Player {
     if (window.Input.isActionPressed('interact')) {
       this.interaction.interact(this.position, this.stealth.isHidden);
     }
+    
+    // Handle attack input
+    if (window.Input.isActionPressed('attack')) {
+      this.interaction.handleAttack(this.position, this.movement.facing, this.movement.isGrounded);
+    }
+
   }
   
   /**

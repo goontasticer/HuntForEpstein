@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vampire Killer - Castlevania-Inspired Adventure</title>
+    <title>President Pedo: The Hunt For The Epstein Files</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
         
         body {
             background: linear-gradient(135deg, #000000 0%, #1a0a0a 50%, #0a0a1a 100%);
-            font-family: 'Georgia', 'Times New Roman', serif;
+            font-family: 'Courier New', monospace;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -47,7 +47,7 @@
             font-weight: bold;
             text-shadow: 0 0 20px #8B0000;
             animation: pulse 2s infinite;
-            font-family: 'Georgia', serif;
+            font-family: 'Courier New', monospace;
         }
         
         @keyframes pulse {
@@ -64,7 +64,7 @@
             font-size: 16px;
             text-align: center;
             opacity: 0.9;
-            font-family: 'Georgia', serif;
+            font-family: 'Courier New', monospace;
             width: 100%;
         }
         
@@ -84,11 +84,13 @@
             left: 50%;
             transform: translateX(-50%);
             color: #8B0000;
-            font-size: 32px;
+            font-size: 28px;
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-            font-family: 'Georgia', serif;
+            font-family: 'Courier New', monospace;
             letter-spacing: 2px;
+            text-align: center;
+            width: 100%;
         }
         
         .subtitle {
@@ -99,22 +101,39 @@
             color: #666;
             font-size: 14px;
             font-style: italic;
-            font-family: 'Georgia', serif;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .warning {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #8B0000;
+            font-size: 12px;
+            font-weight: bold;
+            opacity: 0.7;
+            animation: blink 2s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 0.3; }
         }
     </style>
 </head>
 <body>
+    <div class="warning">CLASSIFIED INFORMATION - DO NOT DISTRIBUTE</div>
     <div id="gameContainer">
-        <div class="game-title">VAMPIRE KILLER</div>
-        <div class="subtitle">A Gothic Action Adventure</div>
+        <div class="game-title">PRESIDENT PEDO</div>
+        <div class="subtitle">The Hunt For The Epstein Files</div>
         <canvas id="gameCanvas" width="1024" height="768"></canvas>
-        <div id="loading">Preparing for Darkness...</div>
+        <div id="loading">Initializing Investigation...</div>
         <div class="controls">
             <div>
-                <kbd>←</kbd><kbd>→</kbd> Move <kbd>↑</kbd><kbd>↓</kbd> Stairs <kbd>Space</kbd> Jump <kbd>Z</kbd> Whip <kbd>X</kbd> Subweapon
+                <kbd>←</kbd><kbd>→</kbd> Move <kbd>↑</kbd><kbd>↓</kbd> Stairs <kbd>Space</kbd> Jump <kbd>Z</kbd> Attack <kbd>X</kbd> Subweapon
             </div>
             <div style="margin-top: 8px; font-size: 14px; color: #666;">
-                Can't change direction mid-air • Break candles for items • Hearts are subweapon ammo
+                Collect all Epstein files to reveal the truth • Can't change direction mid-air • Hearts power your attacks
             </div>
         </div>
     </div>

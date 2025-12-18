@@ -67,8 +67,12 @@ window.Input = (function() {
         
         // Game actions
         mapAction('interact', [KEY_CODES.SPACE, KEY_CODES.ENTER]);
+        mapAction('jump', [KEY_CODES.SPACE]);
+        mapAction('attack', [KEY_CODES.Z]);
+        mapAction('subweapon', [KEY_CODES.X]);
         mapAction('sneak', [KEY_CODES.SHIFT, KEY_CODES.CTRL]);
         mapAction('pause', [KEY_CODES.ESCAPE]);
+
         
         // Debug/utility
         mapAction('debug1', [KEY_CODES.NUM_1]);

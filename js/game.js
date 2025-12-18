@@ -1,8 +1,8 @@
 // FILE_MANIFEST: game.js
 
 /**
- * VAMPIRE KILLER - Castlevania-Inspired Action Platformer
- * Classic gothic action with whip combat, subweapons, and castle exploration
+ * PRESIDENT PEDO: The Hunt For The Epstein Files
+ * A dark platformer adventure through hidden data centers
  */
 
 // Game Configuration
@@ -11,6 +11,7 @@ const Game = {
     height: 768,
     state: 'MENU', // MENU, PLAYING, PAUSED, GAMEOVER
     currentLevel: 1,
+    totalLevels: 5,
     score: 0,
     lives: 3,
     hearts: 5, // Ammo for subweapons
@@ -21,17 +22,16 @@ const Game = {
 // Canvas Context
 let canvas, ctx;
 
-// Belmont - The Vampire Hunter
-const Belmont = {
+// The Investigator
+const Investigator = {
     x: 200,
     y: 602,
-
     width: 32,
     height: 48,
     velocityX: 0,
     velocityY: 0,
     
-    // Movement stats (slower, more methodical than modern games)
+    // Movement stats
     walkSpeed: 120,
     jumpPower: -400,
     gravity: 1200,
@@ -46,11 +46,11 @@ const Belmont = {
     attackCooldown: 0,
     
     // Subweapons
-    currentSubweapon: 'none', // none, dagger, holyWater, cross, axe
+    currentSubweapon: 'none', // none, laptop, drive, server, firewall
     subweaponLevel: 1,
     
     // State
-    isGrounded: false,
+    isGrounded: true, // Start grounded!
     isJumping: false,
     isStairs: false,
     stairsDirection: 0,
@@ -64,6 +64,35 @@ const Belmont = {
     animationTime: 0,
     currentAnimation: 'idle',
     frame: 0
+};
+
+// Camera System
+const Camera = {
+    x: 0,
+    y: 0,
+    width: Game.width,
+    height: Game.height,
+    followSpeed: 0.1,
+    
+    update(targetX, targetY) {
+        const idealX = targetX - this.width / 2;
+        const idealY = targetY - this.height / 2;
+        
+        this.x += (idealX - this.x) * this.followSpeed;
+        this.y += (idealY - this.y) * this.followSpeed;
+        
+        // Camera bounds
+        this.x = Math.max(0, Math.min(DataCenter.width - this.width, this.x));
+        this.y = Math.max(0, Math.min(DataCenter.height - this.height, this.y));
+
+    },
+    
+    apply(entity) {
+        return {
+            x: entity.x - this.x,
+            y: entity.y - this.y
+        };
+    }
 };
 
 // Input System
@@ -95,8 +124,8 @@ const Input = {
     }
 };
 
-// Castle Level System
-const Castle = {
+// Data Center Level System
+const DataCenter = {
     currentRoom: 0,
     rooms: [],
     width: 2048,
@@ -106,98 +135,307 @@ const Castle = {
     platforms: [],
     stairs: [],
     enemies: [],
-    candles: [],
-    items: [],
+    servers: [],
+    files: [],
     doors: [],
     breakableWalls: [],
-    water: [], // Bottomless pits
+    bottomlessPits: [],
     
-    init() {
-        this.rooms = [];
+    init(level) {
         this.platforms = [];
         this.stairs = [];
         this.enemies = [];
-        this.candles = [];
-        this.items = [];
+        this.servers = [];
+        this.files = [];
         this.doors = [];
         this.breakableWalls = [];
-        this.water = [];
+        this.bottomlessPits = [];
         
-        this.generateCastle();
+        this.generateLevel(level);
     },
     
-    generateCastle() {
-        // Floor platforms
-        this.platforms.push(
-            { x: 0, y: 650, width: 2048, height: 118, type: 'stone' },
-            { x: 400, y: 550, width: 200, height: 20, type: 'stone' },
-            { x: 700, y: 450, width: 150, height: 20, type: 'stone' },
-            { x: 1000, y: 500, width: 300, height: 20, type: 'stone' },
-            { x: 1400, y: 400, width: 200, height: 20, type: 'stone' }
-        );
-        
-        // Walls (classic Castlevania vertical design)
-        this.platforms.push(
-            { x: -50, y: 0, width: 50, height: 768, type: 'wall' },
-            { x: 2048, y: 0, width: 50, height: 768, type: 'wall' }
-        );
-        
-        // Stairs (signature Castlevania mechanic)
-        this.stairs.push(
-            { x: 600, y: 550, width: 32, height: 100, direction: 'up' },
-            { x: 850, y: 450, width: 32, height: 100, direction: 'down' },
-            { x: 1300, y: 500, width: 32, height: 150, direction: 'up' }
-        );
-        
-        // Candles (destroy for items)
-        this.candles.push(
-            { x: 300, y: 600, width: 24, height: 32, lit: true, item: 'smallHeart' },
-            { x: 500, y: 500, width: 24, height: 32, lit: true, item: 'whipUpgrade' },
-            { x: 750, y: 400, width: 24, height: 32, lit: true, item: 'dagger' },
-            { x: 950, y: 450, width: 24, height: 32, lit: true, item: 'holyWater' },
-            { x: 1100, y: 450, width: 24, height: 32, lit: true, item: 'smallHeart' },
-            { x: 1350, y: 350, width: 24, height: 32, lit: true, item: 'cross' },
-            { x: 1600, y: 350, width: 24, height: 32, lit: true, item: 'largeHeart' }
-        );
-        
-        // Enemies
-        this.enemies.push(
-            // Zombies - slow but relentless
-            { x: 400, y: 600, width: 32, height: 48, type: 'zombie', health: 2, maxHealth: 2, speed: 30 },
-            { x: 800, y: 400, width: 32, height: 48, type: 'zombie', health: 2, maxHealth: 2, speed: 30 },
-            { x: 1200, y: 450, width: 32, height: 48, type: 'zombie', health: 2, maxHealth: 2, speed: 30 },
+    generateLevel(levelNum) {
+        // Level 1: Entry Floor
+        if (levelNum === 1) {
+            this.width = 2048;
+            this.height = 768;
             
-            // Bats - flying enemies
-            { x: 600, y: 300, width: 24, height: 24, type: 'bat', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
-            { x: 1000, y: 250, width: 24, height: 24, type: 'bat', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
-            { x: 1500, y: 200, width: 24, height: 24, type: 'bat', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
+            // Floor platforms
+            this.platforms.push(
+                { x: 0, y: 650, width: 2048, height: 118, type: 'concrete' },
+                { x: 400, y: 550, width: 200, height: 20, type: 'metal' },
+                { x: 700, y: 450, width: 150, height: 20, type: 'metal' },
+                { x: 1000, y: 500, width: 300, height: 20, type: 'metal' },
+                { x: 1400, y: 400, width: 200, height: 20, type: 'metal' }
+            );
             
-            // Skeletons - throw bones
-            { x: 500, y: 600, width: 28, height: 48, type: 'skeleton', health: 3, maxHealth: 3, speed: 50, throwCooldown: 0 },
-            { x: 900, y: 400, width: 28, height: 48, type: 'skeleton', health: 3, maxHealth: 3, speed: 50, throwCooldown: 0 }
-        );
+            // Walls
+            this.platforms.push(
+                { x: -50, y: 0, width: 50, height: 768, type: 'wall' },
+                { x: 2048, y: 0, width: 50, height: 768, type: 'wall' }
+            );
+            
+            // Stairs
+            this.stairs.push(
+                { x: 600, y: 550, width: 32, height: 100, direction: 'up' },
+                { x: 850, y: 450, width: 32, height: 100, direction: 'down' },
+                { x: 1300, y: 500, width: 32, height: 150, direction: 'up' }
+            );
+            
+            // Servers (replace candles)
+            this.servers.push(
+                { x: 300, y: 600, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 500, y: 500, width: 32, height: 40, active: true, item: 'whipUpgrade', type: 'server' },
+                { x: 750, y: 400, width: 32, height: 40, active: true, item: 'laptop', type: 'mainframe' },
+                { x: 950, y: 450, width: 32, height: 40, active: true, item: 'drive', type: 'database' },
+                { x: 1100, y: 450, width: 32, height: 40, active: true, item: 'smallHeart', type: 'server' },
+                { x: 1350, y: 350, width: 32, height: 40, active: true, item: 'server', type: 'mainframe' },
+                { x: 1600, y: 350, width: 32, height: 40, active: true, item: 'largeHeart', type: 'database' }
+            );
+            
+            // Enemies
+            this.enemies.push(
+                // Security guards
+                { x: 400, y: 600, width: 32, height: 48, type: 'guard', health: 2, maxHealth: 2, speed: 30 },
+                { x: 800, y: 400, width: 32, height: 48, type: 'guard', health: 2, maxHealth: 2, speed: 30 },
+                { x: 1200, y: 450, width: 32, height: 48, type: 'guard', health: 2, maxHealth: 2, speed: 30 },
+                
+                // Security drones
+                { x: 600, y: 300, width: 24, height: 24, type: 'drone', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
+                { x: 1000, y: 250, width: 24, height: 24, type: 'drone', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
+                { x: 1500, y: 200, width: 24, height: 24, type: 'drone', health: 1, maxHealth: 1, speed: 100, amplitude: 50 },
+                
+                // Elite security
+                { x: 500, y: 600, width: 32, height: 48, type: 'elite', health: 3, maxHealth: 3, speed: 50, throwCooldown: 0 },
+                { x: 900, y: 400, width: 32, height: 48, type: 'elite', health: 3, maxHealth: 3, speed: 50, throwCooldown: 0 }
+            );
+            
+            // Files to collect (add 5th hidden file)
+            this.files.push(
+                { x: 350, y: 300, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 750, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1150, y: 300, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1550, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1800, y: 150, width: 20, height: 20, collected: false, type: 'epstein', hidden: true }
+            );
+
+        }
         
-        // Water pits (instant death)
-        this.water.push(
-            { x: 1200, y: 768, width: 150, height: 100 }
-        );
+        // Level 2: Server Rooms
+        else if (levelNum === 2) {
+            this.width = 2560;
+            this.height = 768;
+            
+            this.platforms.push(
+                { x: 0, y: 650, width: 2560, height: 118, type: 'concrete' },
+                { x: 300, y: 550, width: 150, height: 20, type: 'metal' },
+                { x: 550, y: 450, width: 200, height: 20, type: 'metal' },
+                { x: 900, y: 500, width: 180, height: 20, type: 'metal' },
+                { x: 1200, y: 400, width: 250, height: 20, type: 'metal' },
+                { x: 1600, y: 350, width: 200, height: 20, type: 'metal' },
+                { x: 2000, y: 450, width: 180, height: 20, type: 'metal' }
+            );
+            
+            this.platforms.push(
+                { x: -50, y: 0, width: 50, height: 768, type: 'wall' },
+                { x: 2560, y: 0, width: 50, height: 768, type: 'wall' }
+            );
+            
+            this.servers.push(
+                { x: 200, y: 600, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 450, y: 500, width: 32, height: 40, active: true, item: 'laptop', type: 'mainframe' },
+                { x: 650, y: 400, width: 32, height: 40, active: true, item: 'drive', type: 'server' },
+                { x: 850, y: 450, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 1100, y: 350, width: 32, height: 40, active: true, item: 'server', type: 'mainframe' },
+                { x: 1350, y: 300, width: 32, height: 40, active: true, item: 'firewall', type: 'security' }
+            );
+            
+            this.enemies.push(
+                { x: 300, y: 600, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 },
+                { x: 600, y: 450, width: 32, height: 48, type: 'elite', health: 4, maxHealth: 4, speed: 60 },
+                { x: 900, y: 400, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 },
+                { x: 1200, y: 450, width: 32, height: 48, type: 'elite', health: 4, maxHealth: 4, speed: 60 },
+                { x: 1500, y: 300, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 }
+            );
+            
+            this.files.push(
+                { x: 400, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 800, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1300, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1800, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 2200, y: 350, width: 20, height: 20, collected: false, type: 'epstein' }
+            );
+        }
+        
+        // Level 3: Underground Bunkers
+        else if (levelNum === 3) {
+            this.width = 2048;
+            this.height = 896;
+            
+            this.platforms.push(
+                { x: 0, y: 778, width: 2048, height: 118, type: 'concrete' },
+                { x: 200, y: 650, width: 120, height: 20, type: 'metal' },
+                { x: 400, y: 550, width: 180, height: 20, type: 'metal' },
+                { x: 700, y: 480, width: 150, height: 20, type: 'metal' },
+                { x: 1000, y: 550, width: 200, height: 20, type: 'metal' },
+                { x: 1400, y: 650, width: 160, height: 20, type: 'metal' },
+                { x: 1700, y: 450, width: 120, height: 20, type: 'metal' }
+            );
+            
+            this.platforms.push(
+                { x: -50, y: 0, width: 50, height: 896, type: 'wall' },
+                { x: 2048, y: 0, width: 50, height: 896, type: 'wall' }
+            );
+            
+            this.servers.push(
+                { x: 150, y: 600, width: 32, height: 40, active: true, item: 'largeHeart', type: 'mainframe' },
+                { x: 350, y: 500, width: 32, height: 40, active: true, item: 'drive', type: 'database' },
+                { x: 550, y: 400, width: 32, height: 40, active: true, item: 'firewall', type: 'security' },
+                { x: 800, y: 350, width: 32, height: 40, active: true, item: 'laptop', type: 'server' },
+                { x: 1100, y: 450, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 1500, y: 550, width: 32, height: 40, active: true, item: 'server', type: 'mainframe' },
+                { x: 1800, y: 350, width: 32, height: 40, active: true, item: 'whipUpgrade', type: 'security' }
+            );
+            
+            this.enemies.push(
+                { x: 300, y: 650, width: 32, height: 48, type: 'elite', health: 4, maxHealth: 4, speed: 50 },
+                { x: 600, y: 480, width: 32, height: 48, type: 'guard', health: 2, maxHealth: 2, speed: 30 },
+                { x: 900, y: 550, width: 32, height: 48, type: 'elite', health: 4, maxHealth: 4, speed: 50 },
+                { x: 1200, y: 450, width: 32, height: 48, type: 'guard', health: 2, maxHealth: 2, speed: 30 },
+                { x: 1500, y: 650, width: 32, height: 48, type: 'elite', health: 4, maxHealth: 4, speed: 50 }
+            );
+            
+            this.files.push(
+                { x: 250, y: 350, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 600, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 950, y: 300, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1400, y: 350, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1700, y: 300, width: 20, height: 20, collected: false, type: 'epstein', hidden: true }
+            );
+
+            
+            // Bottomless pits
+            this.bottomlessPits.push(
+                { x: 500, y: 896, width: 100, height: 100 },
+                { x: 1300, y: 896, width: 120, height: 100 }
+            );
+        }
+        
+        // Level 4: Private Island
+        else if (levelNum === 4) {
+            this.width = 2560;
+            this.height = 768;
+            
+            this.platforms.push(
+                { x: 0, y: 650, width: 2560, height: 118, type: 'sand' },
+                { x: 250, y: 550, width: 180, height: 20, type: 'wood' },
+                { x: 550, y: 450, width: 200, height: 20, type: 'wood' },
+                { x: 850, y: 500, width: 160, height: 20, type: 'wood' },
+                { x: 1100, y: 400, width: 220, height: 20, type: 'wood' },
+                { x: 1400, y: 350, width: 180, height: 20, type: 'wood' },
+                { x: 1700, y: 450, width: 200, height: 20, type: 'wood' },
+                { x: 2000, y: 500, width: 160, height: 20, type: 'wood' }
+            );
+            
+            this.platforms.push(
+                { x: -50, y: 0, width: 50, height: 768, type: 'wall' },
+                { x: 2560, y: 0, width: 50, height: 768, type: 'wall' }
+            );
+            
+            this.servers.push(
+                { x: 200, y: 600, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 450, y: 500, width: 32, height: 40, active: true, item: 'laptop', type: 'mainframe' },
+                { x: 700, y: 400, width: 32, height: 40, active: true, item: 'drive', type: 'server' },
+                { x: 950, y: 450, width: 32, height: 40, active: true, item: 'firewall', type: 'security' },
+                { x: 1250, y: 350, width: 32, height: 40, active: true, item: 'server', type: 'mainframe' },
+                { x: 1550, y: 300, width: 32, height: 40, active: true, item: 'smallHeart', type: 'database' },
+                { x: 1850, y: 400, width: 32, height: 40, active: true, item: 'whipUpgrade', type: 'server' },
+                { x: 2150, y: 450, width: 32, height: 40, active: true, item: 'largeHeart', type: 'database' }
+            );
+            
+            this.enemies.push(
+                { x: 300, y: 600, width: 32, height: 48, type: 'elite', health: 5, maxHealth: 5, speed: 60 },
+                { x: 600, y: 450, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 },
+                { x: 900, y: 400, width: 32, height: 48, type: 'elite', health: 5, maxHealth: 5, speed: 60 },
+                { x: 1200, y: 450, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 },
+                { x: 1500, y: 350, width: 32, height: 48, type: 'elite', health: 5, maxHealth: 5, speed: 60 },
+                { x: 1800, y: 400, width: 32, height: 48, type: 'guard', health: 3, maxHealth: 3, speed: 40 }
+            );
+            
+            this.files.push(
+                { x: 350, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 750, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1150, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1650, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 2050, y: 350, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 450, y: 150, width: 20, height: 20, collected: false, type: 'epstein', hidden: true }
+            );
+
+        }
+        
+        // Level 5: Final Confrontation
+        else if (levelNum === 5) {
+            this.width = 2048;
+            this.height = 768;
+            
+            this.platforms.push(
+                { x: 0, y: 650, width: 2048, height: 118, type: 'marble' },
+                { x: 300, y: 550, width: 200, height: 20, type: 'marble' },
+                { x: 600, y: 450, width: 250, height: 20, type: 'marble' },
+                { x: 950, y: 500, width: 200, height: 20, type: 'marble' },
+                { x: 1300, y: 400, width: 300, height: 20, type: 'marble' },
+                { x: 1700, y: 350, width: 200, height: 20, type: 'marble' }
+            );
+            
+            this.platforms.push(
+                { x: -50, y: 0, width: 50, height: 768, type: 'wall' },
+                { x: 2048, y: 0, width: 50, height: 768, type: 'wall' }
+            );
+            
+            this.servers.push(
+                { x: 400, y: 600, width: 32, height: 40, active: true, item: 'largeHeart', type: 'mainframe' },
+                { x: 800, y: 500, width: 32, height: 40, active: true, item: 'firewall', type: 'security' },
+                { x: 1200, y: 450, width: 32, height: 40, active: true, item: 'drive', type: 'server' },
+                { x: 1600, y: 350, width: 32, height: 40, active: true, item: 'laptop', type: 'database' }
+            );
+            
+            this.enemies.push(
+                // Boss area with many guards
+                { x: 400, y: 600, width: 32, height: 48, type: 'elite', health: 6, maxHealth: 6, speed: 70 },
+                { x: 700, y: 450, width: 32, height: 48, type: 'guard', health: 4, maxHealth: 4, speed: 50 },
+                { x: 1000, y: 500, width: 32, height: 48, type: 'elite', health: 6, maxHealth: 6, speed: 70 },
+                { x: 1400, y: 400, width: 32, height: 48, type: 'guard', health: 4, maxHealth: 4, speed: 50 },
+                { x: 1800, y: 350, width: 32, height: 48, type: 'elite', health: 6, maxHealth: 6, speed: 70 }
+            );
+            
+            this.files.push(
+                { x: 450, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 850, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1250, y: 250, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1650, y: 200, width: 20, height: 20, collected: false, type: 'epstein' },
+                { x: 1850, y: 150, width: 20, height: 20, collected: false, type: 'epstein', hidden: true },
+                // Final secret file
+                { x: 1920, y: 250, width: 24, height: 24, collected: false, type: 'blackbook' }
+            );
+
+        }
     }
 };
 
-// Whip System
-const Whip = {
+// Investigator's Laptop (Whip)
+const Laptop = {
     extending: false,
     extendingTimer: 0,
     segments: [],
     
     attack(x, y, facing) {
-        if (Belmont.attackCooldown <= 0 && !Belmont.whipExtended) {
-            Belmont.attacking = true;
-            Belmont.whipExtended = true;
-            Belmont.whipTimer = 0.3;
-            Belmont.attackCooldown = 0.4;
+        if (Investigator.attackCooldown <= 0 && !Investigator.whipExtended) {
+            Investigator.attacking = true;
+            Investigator.whipExtended = true;
+            Investigator.whipTimer = 0.3;
+            Investigator.attackCooldown = 0.4;
             
-            // Create whip segments
+            // Create laptop segments
             this.segments = [];
             for (let i = 0; i < 4; i++) {
                 this.segments.push({
@@ -211,62 +449,62 @@ const Whip = {
     },
     
     update(dt) {
-        if (Belmont.whipTimer > 0) {
-            Belmont.whipTimer -= dt;
+        if (Investigator.whipTimer > 0) {
+            Investigator.whipTimer -= dt;
             
-            // Update whip segments position
+            // Update laptop segments position
             for (let i = 0; i < this.segments.length; i++) {
-                this.segments[i].x = Belmont.x + Belmont.width/2 + (Belmont.facing > 0 ? (i + 1) * 20 : -(i + 1) * 20);
-                this.segments[i].y = Belmont.y + 16;
+                this.segments[i].x = Investigator.x + Investigator.width/2 + (Investigator.facing > 0 ? (i + 1) * 20 : -(i + 1) * 20);
+                this.segments[i].y = Investigator.y + 16;
             }
             
-            if (Belmont.whipTimer <= 0) {
-                Belmont.whipExtended = false;
-                Belmont.attacking = false;
+            if (Investigator.whipTimer <= 0) {
+                Investigator.whipExtended = false;
+                Investigator.attacking = false;
                 this.segments = [];
             }
         }
         
-        if (Belmont.attackCooldown > 0) {
-            Belmont.attackCooldown -= dt;
+        if (Investigator.attackCooldown > 0) {
+            Investigator.attackCooldown -= dt;
         }
     },
     
-    checkEnemyCollisions() {
+    checkCollisions() {
         for (let segment of this.segments) {
-            for (let enemy of Castle.enemies) {
+            // Check enemy collisions
+            for (let enemy of DataCenter.enemies) {
                 if (segment.x < enemy.x + enemy.width &&
                     segment.x + segment.width > enemy.x &&
                     segment.y < enemy.y + enemy.height &&
                     segment.y + segment.height > enemy.y) {
                     
                     enemy.health--;
-                    enemy.knockbackX = Belmont.facing * 100;
+                    enemy.knockbackX = Investigator.facing * 100;
                     enemy.knockbackY = -50;
                     enemy.invulnerable = 0.5;
                     
                     if (enemy.health <= 0) {
-                        const index = Castle.enemies.indexOf(enemy);
-                        Castle.enemies.splice(index, 1);
-                        Game.score += enemy.type === 'zombie' ? 100 : enemy.type === 'bat' ? 200 : 300;
+                        const index = DataCenter.enemies.indexOf(enemy);
+                        DataCenter.enemies.splice(index, 1);
+                        const points = enemy.type === 'guard' ? 100 : enemy.type === 'elite' ? 200 : 300;
+                        Game.score += points;
                     }
                     
                     return; // Only hit once per attack
                 }
             }
-        }
-        
-        // Check candle collisions
-        for (let candle of Castle.candles) {
-            if (candle.lit) {
-                for (let segment of this.segments) {
-                    if (segment.x < candle.x + candle.width &&
-                        segment.x + segment.width > candle.x &&
-                        segment.y < candle.y + candle.height &&
-                        segment.y + segment.height > candle.y) {
+            
+            // Check server collisions
+            for (let server of DataCenter.servers) {
+                if (server.active) {
+                    if (segment.x < server.x + server.width &&
+                        segment.x + segment.width > server.x &&
+                        segment.y < server.y + server.height &&
+                        segment.y + segment.height > server.y) {
                         
-                        candle.lit = false;
-                        spawnCandleItem(candle);
+                        server.active = false;
+                        spawnServerItem(server);
                         break;
                     }
                 }
@@ -282,49 +520,49 @@ const Subweapons = {
     use(type, x, y, facing) {
         if (Game.hearts <= 0) return;
         
-        const heartCost = { dagger: 1, holyWater: 2, cross: 3, axe: 2 }[type] || 0;
+        const heartCost = { laptop: 1, drive: 2, server: 3, firewall: 2 }[type] || 0;
         if (Game.hearts < heartCost) return;
         
         Game.hearts -= heartCost;
         
         switch(type) {
-            case 'dagger':
+            case 'laptop':
                 this.projectiles.push({
-                    x: x + Belmont.width/2,
-                    y: y + Belmont.height/2,
+                    x: x + Investigator.width/2,
+                    y: y + Investigator.height/2,
                     velocityX: facing * 400,
                     velocityY: 0,
                     width: 20,
                     height: 8,
-                    type: 'dagger',
+                    type: 'laptop',
                     damage: 1
                 });
                 break;
                 
-            case 'holyWater':
+            case 'drive':
                 this.projectiles.push({
-                    x: x + Belmont.width/2 + (facing * 20),
-                    y: y + Belmont.height,
+                    x: x + Investigator.width/2 + (facing * 20),
+                    y: y + Investigator.height,
                     velocityX: facing * 150,
                     velocityY: -200,
                     width: 16,
                     height: 16,
-                    type: 'holyWater',
+                    type: 'drive',
                     damage: 2,
                     exploding: false,
                     explosionTimer: 0
                 });
                 break;
                 
-            case 'cross':
+            case 'server':
                 this.projectiles.push({
-                    x: x + Belmont.width/2,
-                    y: y + Belmont.height/2,
+                    x: x + Investigator.width/2,
+                    y: y + Investigator.height/2,
                     velocityX: facing * 200,
                     velocityY: 0,
                     width: 24,
                     height: 24,
-                    type: 'cross',
+                    type: 'server',
                     damage: 2,
                     boomerang: true,
                     returnTimer: 0
@@ -338,7 +576,7 @@ const Subweapons = {
             proj.x += proj.velocityX * dt;
             proj.y += proj.velocityY * dt;
             
-            if (proj.type === 'holyWater') {
+            if (proj.type === 'drive') {
                 proj.velocityY += 800 * dt; // Gravity
                 if (proj.y >= 620 && !proj.exploding) {
                     proj.exploding = true;
@@ -351,26 +589,26 @@ const Subweapons = {
                 }
             }
             
-            if (proj.type === 'cross' && proj.boomerang) {
+            if (proj.type === 'server' && proj.boomerang) {
                 proj.returnTimer += dt;
                 if (proj.returnTimer > 1.5) {
                     // Return to player
-                    const dx = Belmont.x + Belmont.width/2 - proj.x;
+                    const dx = Investigator.x + Investigator.width/2 - proj.x;
                     proj.velocityX = (dx > 0 ? 300 : -300);
                 }
             }
             
             // Remove if off screen
-            return proj.x > -50 && proj.x < Castle.width + 50 && proj.y > -50 && proj.y < Castle.height + 50;
+            return proj.x > -50 && proj.x < DataCenter.width + 50 && proj.y > -50 && proj.y < DataCenter.height + 50;
         });
     }
 };
 
-function spawnCandleItem(candle) {
-    const x = candle.x + candle.width/2;
-    const y = candle.y + candle.height/2;
+function spawnServerItem(server) {
+    const x = server.x + server.width/2;
+    const y = server.y + server.height/2;
     
-    switch(candle.item) {
+    switch(server.item) {
         case 'smallHeart':
             Game.hearts = Math.min(99, Game.hearts + 1);
             break;
@@ -378,144 +616,174 @@ function spawnCandleItem(candle) {
             Game.hearts = Math.min(99, Game.hearts + 5);
             break;
         case 'whipUpgrade':
-            // Whip would level up in full implementation
+            // Laptop would level up in full implementation
             break;
-        case 'dagger':
-        case 'holyWater':
-        case 'cross':
-            Belmont.currentSubweapon = candle.item;
+        case 'laptop':
+        case 'drive':
+        case 'server':
+        case 'firewall':
+            Investigator.currentSubweapon = server.item;
             break;
     }
 }
 
 // Update Functions
-function updateBelmont(dt) {
+function updateInvestigator(dt) {
     Input.updatePrevious();
     
-    // Handle stairs (signature Castlevania mechanic)
+    // Handle stairs
     let onStairs = false;
-    for (let stair of Castle.stairs) {
-        if (Belmont.x + Belmont.width > stair.x &&
-            Belmont.x < stair.x + stair.width &&
-            Belmont.y + Belmont.height > stair.y &&
-            Belmont.y < stair.y + stair.height) {
+    for (let stair of DataCenter.stairs) {
+        if (Investigator.x + Investigator.width > stair.x &&
+            Investigator.x < stair.x + stair.width &&
+            Investigator.y + Investigator.height > stair.y &&
+            Investigator.y < stair.y + stair.height) {
             onStairs = true;
-            Belmont.isStairs = true;
+            Investigator.isStairs = true;
             
             // Stair movement
             if (Input.isPressed('ArrowUp')) {
-                Belmont.velocityY = -80;
-                Belmont.velocityX = 0;
+                Investigator.velocityY = -80;
+                Investigator.velocityX = 0;
             } else if (Input.isPressed('ArrowDown')) {
-                Belmont.velocityY = 80;
-                Belmont.velocityX = 0;
+                Investigator.velocityY = 80;
+                Investigator.velocityX = 0;
             } else {
-                Belmont.velocityY = 0;
+                Investigator.velocityY = 0;
             }
             
             if (stair.direction === 'down' && Input.justPressed('ArrowUp')) {
-                Belmont.x -= 32; // Exit stairs up
-                Belmont.isStairs = false;
+                Investigator.x -= 32; // Exit stairs up
+                Investigator.isStairs = false;
             } else if (stair.direction === 'up' && Input.justPressed('ArrowDown')) {
-                Belmont.x += 32; // Exit stairs down
-                Belmont.isStairs = false;
+                Investigator.x += 32; // Exit stairs down
+                Investigator.isStairs = false;
             }
+
             
             break;
         }
     }
     
     if (!onStairs) {
-        Belmont.isStairs = false;
+        Investigator.isStairs = false;
         
         // Normal movement
         if (Input.isPressed('ArrowLeft')) {
-            Belmont.velocityX = -Belmont.walkSpeed;
-            Belmont.facing = -1;
-            Belmont.currentAnimation = 'walk';
+            Investigator.velocityX = -Investigator.walkSpeed;
+            Investigator.facing = -1;
+            Investigator.currentAnimation = 'walk';
         } else if (Input.isPressed('ArrowRight')) {
-            Belmont.velocityX = Belmont.walkSpeed;
-            Belmont.facing = 1;
-            Belmont.currentAnimation = 'walk';
+            Investigator.velocityX = Investigator.walkSpeed;
+            Investigator.facing = 1;
+            Investigator.currentAnimation = 'walk';
         } else {
-            Belmont.velocityX *= 0.8;
-            if (Math.abs(Belmont.velocityX) < 10) {
-                Belmont.velocityX = 0;
-                Belmont.currentAnimation = 'idle';
+            Investigator.velocityX *= 0.8;
+            if (Math.abs(Investigator.velocityX) < 10) {
+                Investigator.velocityX = 0;
+                Investigator.currentAnimation = 'idle';
             }
         }
         
-        // Jump (can't change direction mid-air - classic Castlevania)
-        if (Input.justPressed('Space') && Belmont.isGrounded) {
-            Belmont.velocityY = Belmont.jumpPower;
-            Belmont.isJumping = true;
+        // Jump (can't change direction mid-air)
+        if (Input.justPressed('Space') && Investigator.isGrounded) {
+            Investigator.velocityY = Investigator.jumpPower;
+            Investigator.isJumping = true;
+            Investigator.isGrounded = false; // Important: Set immediately!
         }
         
         // Apply gravity
-        Belmont.velocityY += Belmont.gravity * dt;
-        Belmont.velocityY = Math.min(Belmont.velocityY, Belmont.fallSpeed);
+        Investigator.velocityY += Investigator.gravity * dt;
+        Investigator.velocityY = Math.min(Investigator.velocityY, Investigator.fallSpeed);
     }
     
     // Apply knockback
-    if (Belmont.knockbackX !== 0) {
-        Belmont.velocityX = Belmont.knockbackX;
-        Belmont.knockbackX *= 0.9;
-        if (Math.abs(Belmont.knockbackX) < 1) Belmont.knockbackX = 0;
+    if (Investigator.knockbackX !== 0) {
+        Investigator.velocityX = Investigator.knockbackX;
+        Investigator.knockbackX *= 0.9;
+        if (Math.abs(Investigator.knockbackX) < 1) Investigator.knockbackX = 0;
     }
-    if (Belmont.knockbackY !== 0) {
-        Belmont.velocityY = Belmont.knockbackY;
-        Belmont.knockbackY *= 0.9;
-        if (Math.abs(Belmont.knockbackY) < 1) Belmont.knockbackY = 0;
+    if (Investigator.knockbackY !== 0) {
+        Investigator.velocityY = Investigator.knockbackY;
+        Investigator.knockbackY *= 0.9;
+        if (Math.abs(Investigator.knockbackY) < 1) Investigator.knockbackY = 0;
     }
     
     // Update position
-    Belmont.x += Belmont.velocityX * dt;
-    Belmont.y += Belmont.velocityY * dt;
+    Investigator.x += Investigator.velocityX * dt;
+    Investigator.y += Investigator.velocityY * dt;
     
     // Update invulnerability
-    if (Belmont.invulnerable > 0) {
-        Belmont.invulnerable -= dt;
+    if (Investigator.invulnerable > 0) {
+        Investigator.invulnerable -= dt;
     }
     
     // Update animation
-    Belmont.animationTime += dt;
+    Investigator.animationTime += dt;
 }
 
 function checkCollisions() {
-    Belmont.isGrounded = false;
+    Investigator.isGrounded = false;
     
     // Platform collisions
-    for (let platform of Castle.platforms) {
-        if (Belmont.x < platform.x + platform.width &&
-            Belmont.x + Belmont.width > platform.x &&
-            Belmont.y < platform.y + platform.height &&
-            Belmont.y + Belmont.height > platform.y) {
+    for (let platform of DataCenter.platforms) {
+        if (Investigator.x < platform.x + platform.width &&
+            Investigator.x + Investigator.width > platform.x &&
+            Investigator.y < platform.y + platform.height &&
+            Investigator.y + Investigator.height > platform.y) {
             
-            if (!Belmont.isStairs) {
+            if (!Investigator.isStairs) {
                 // Landing on top
-                if (Belmont.velocityY >= 0 && Belmont.y + Belmont.height > platform.y) {
-                    Belmont.y = platform.y - Belmont.height;
-                    Belmont.velocityY = 0;
-                    Belmont.isGrounded = true;
-                    Belmont.isJumping = false;
+                if (Investigator.velocityY >= 0 && Investigator.y + Investigator.height > platform.y) {
+                    Investigator.y = platform.y - Investigator.height;
+                    Investigator.velocityY = 0;
+                    Investigator.isGrounded = true;
+                    Investigator.isJumping = false;
                 }
             }
         }
     }
     
-    // Water pit collision (instant death)
-    for (let water of Castle.water) {
-        if (Belmont.x < water.x + water.width &&
-            Belmont.x + Belmont.width > water.x &&
-            Belmont.y < water.y &&
-            Belmont.y + Belmont.height > water.y - water.height) {
+    // File collection
+    for (let file of DataCenter.files) {
+        if (!file.collected &&
+            Investigator.x < file.x + file.width &&
+            Investigator.x + Investigator.width > file.x &&
+            Investigator.y < file.y + file.height &&
+            Investigator.y + Investigator.height > file.y) {
+            
+            file.collected = true;
+            Game.score += file.type === 'blackbook' ? 1000 : 500;
+            
+            // Check level completion
+            const allFilesCollected = DataCenter.files.every(f => f.collected);
+            if (allFilesCollected) {
+                if (Game.currentLevel >= Game.totalLevels) {
+                    Game.state = 'VICTORY';
+                } else {
+                    Game.currentLevel++;
+                    DataCenter.init(Game.currentLevel);
+                    Investigator.x = 200;
+                    Investigator.y = 602;
+                    Investigator.health = Investigator.maxHealth;
+                }
+            }
+        }
+    }
+    
+    // Bottomless pit collision
+    for (let pit of DataCenter.bottomlessPits) {
+        if (Investigator.x < pit.x + pit.width &&
+            Investigator.x + Investigator.width > pit.x &&
+            Investigator.y < pit.y &&
+            Investigator.y + Investigator.height > pit.y - pit.height) {
             takeDamage(99); // Instant death
         }
     }
 }
 
 function updateEnemies(dt) {
-    for (let enemy of Castle.enemies) {
+    for (let enemy of DataCenter.enemies) {
         enemy.animationTime = (enemy.animationTime || 0) + dt;
         
         // Apply knockback
@@ -527,38 +795,35 @@ function updateEnemies(dt) {
         
         // Enemy AI based on type
         switch(enemy.type) {
-            case 'zombie':
-                // Slow, relentless advance toward player
-                const zombieDx = Belmont.x - enemy.x;
-                if (Math.abs(zombieDx) > 50) {
-                    enemy.velocityX = (zombieDx > 0 ? enemy.speed : -enemy.speed);
+            case 'guard':
+                const guardDx = Investigator.x - enemy.x;
+                if (Math.abs(guardDx) > 50) {
+                    enemy.velocityX = (guardDx > 0 ? enemy.speed : -enemy.speed);
                 } else {
                     enemy.velocityX = 0;
                 }
                 break;
                 
-            case 'bat':
-                // Flying sine wave pattern
-                enemy.x += enemy.speed * (enemy.x < Belmont.x ? 1 : -1) * dt;
+            case 'drone':
+                enemy.x += enemy.speed * (enemy.x < Investigator.x ? 1 : -1) * dt;
                 enemy.y += Math.sin(enemy.animationTime * 3) * enemy.amplitude * dt;
                 break;
                 
-            case 'skeleton':
-                // Walk and throw bones
-                enemy.x += enemy.speed * (enemy.x < Belmont.x ? 1 : -1) * dt;
+            case 'elite':
+                enemy.x += enemy.speed * (enemy.x < Investigator.x ? 1 : -1) * dt;
                 enemy.throwCooldown -= dt;
                 
-                const skeletonDist = Math.abs(Belmont.x - enemy.x);
-                if (skeletonDist < 300 && enemy.throwCooldown <= 0) {
-                    // Throw bone
+                const eliteDist = Math.abs(Investigator.x - enemy.x);
+                if (eliteDist < 300 && enemy.throwCooldown <= 0) {
+                    // Throw object
                     Subweapons.projectiles.push({
                         x: enemy.x + enemy.width/2,
                         y: enemy.y + enemy.height/2,
-                        velocityX: (Belmont.x > enemy.x ? 200 : -200),
+                        velocityX: (Investigator.x > enemy.x ? 200 : -200),
                         velocityY: -100,
                         width: 12,
                         height: 8,
-                        type: 'bone',
+                        type: 'drive',
                         damage: 1,
                         enemyProjectile: true
                     });
@@ -579,15 +844,14 @@ function updateEnemies(dt) {
         }
         
         // Check collision with player
-        const dx = Belmont.x - enemy.x;
-        const dy = Belmont.y - enemy.y;
+        const dx = Investigator.x - enemy.x;
+        const dy = Investigator.y - enemy.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance < 40 && Belmont.invulnerable <= 0) {
+        if (distance < 40 && Investigator.invulnerable <= 0) {
             takeDamage(1);
-            // Knockback
-            Belmont.knockbackX = (dx > 0 ? 150 : -150);
-            Belmont.knockbackY = -100;
+            Investigator.knockbackX = (dx > 0 ? 150 : -150);
+            Investigator.knockbackY = -100;
         }
     }
 }
@@ -598,13 +862,12 @@ function updateProjectiles(dt) {
     // Check projectile collisions
     for (let proj of Subweapons.projectiles) {
         // Enemy projectiles vs player
-        if (proj.enemyProjectile && Belmont.invulnerable <= 0) {
-            if (proj.x < Belmont.x + Belmont.width &&
-                proj.x + proj.width > Belmont.x &&
-                proj.y < Belmont.y + Belmont.height &&
-                proj.y + proj.height > Belmont.y) {
+        if (proj.enemyProjectile && Investigator.invulnerable <= 0) {
+            if (proj.x < Investigator.x + Investigator.width &&
+                proj.x + proj.width > Investigator.x &&
+                proj.y < Investigator.y + Investigator.height &&
+                proj.y + proj.height > Investigator.y) {
                 takeDamage(1);
-                // Remove projectile
                 const index = Subweapons.projectiles.indexOf(proj);
                 Subweapons.projectiles.splice(index, 1);
             }
@@ -612,7 +875,7 @@ function updateProjectiles(dt) {
         
         // Player projectiles vs enemies
         if (!proj.enemyProjectile) {
-            for (let enemy of Castle.enemies) {
+            for (let enemy of DataCenter.enemies) {
                 if (enemy.invulnerable <= 0 &&
                     proj.x < enemy.x + enemy.width &&
                     proj.x + proj.width > enemy.x &&
@@ -624,15 +887,16 @@ function updateProjectiles(dt) {
                     enemy.knockbackY = -30;
                     enemy.invulnerable = 0.5;
                     
-                    if (proj.type !== 'holyWater' || !proj.exploding) {
+                    if (proj.type !== 'drive' || !proj.exploding) {
                         const index = Subweapons.projectiles.indexOf(proj);
                         Subweapons.projectiles.splice(index, 1);
                     }
                     
                     if (enemy.health <= 0) {
-                        const enemyIndex = Castle.enemies.indexOf(enemy);
-                        Castle.enemies.splice(enemyIndex, 1);
-                        Game.score += enemy.type === 'zombie' ? 100 : enemy.type === 'bat' ? 200 : 300;
+                        const enemyIndex = DataCenter.enemies.indexOf(enemy);
+                        DataCenter.enemies.splice(enemyIndex, 1);
+                        const points = enemy.type === 'guard' ? 100 : enemy.type === 'elite' ? 200 : 300;
+                        Game.score += points;
                     }
                     
                     break;
@@ -643,34 +907,33 @@ function updateProjectiles(dt) {
 }
 
 function takeDamage(amount) {
-    Belmont.health -= amount;
-    Belmont.invulnerable = 1.5; // 1.5 seconds of invulnerability
+    Investigator.health -= amount;
+    Investigator.invulnerable = 1.5;
     
-    if (Belmont.health <= 0) {
+    if (Investigator.health <= 0) {
         Game.lives--;
         if (Game.lives <= 0) {
             Game.state = 'GAMEOVER';
         } else {
             // Respawn
-            Belmont.x = 200;
-            Belmont.y = 602;
-            Belmont.health = Belmont.maxHealth;
-            Belmont.invulnerable = 3;
+            Investigator.x = 200;
+            Investigator.y = 602;
+            Investigator.health = Investigator.maxHealth;
+            Investigator.invulnerable = 3;
         }
-
     }
 }
 
 // Input Handling
 function handleInput() {
-    // Whip attack
+    // Laptop attack
     if (Input.justPressed('KeyZ')) {
-        Whip.attack(Belmont.x, Belmont.y, Belmont.facing);
+        Laptop.attack(Investigator.x, Investigator.y, Investigator.facing);
     }
     
     // Subweapon
-    if (Input.justPressed('KeyX') && Belmont.currentSubweapon !== 'none') {
-        Subweapons.use(Belmont.currentSubweapon, Belmont.x, Belmont.y, Belmont.facing);
+    if (Input.justPressed('KeyX') && Investigator.currentSubweapon !== 'none') {
+        Subweapons.use(Investigator.currentSubweapon, Investigator.x, Investigator.y, Investigator.facing);
     }
 }
 
@@ -686,154 +949,176 @@ function updateGame(dt) {
     }
     
     handleInput();
-    updateBelmont(dt);
+    updateInvestigator(dt);
     checkCollisions();
     updateEnemies(dt);
     updateProjectiles(dt);
-    Whip.update(dt);
-    Whip.checkEnemyCollisions();
+    Laptop.update(dt);
+    Laptop.checkCollisions();
+    Camera.update(Investigator.x + Investigator.width/2, Investigator.y + Investigator.height/2);
 }
 
 // Rendering
-function renderBelmont() {
+function renderInvestigator() {
+    const screenPos = Camera.apply(Investigator);
+    
     ctx.save();
     
-    const screenX = Belmont.x;
-    const screenY = Belmont.y;
-    
     // Flashing when invulnerable
-    if (Belmont.invulnerable > 0 && Math.floor(Belmont.invulnerable * 10) % 2 === 0) {
+    if (Investigator.invulnerable > 0 && Math.floor(Investigator.invulnerable * 10) % 2 === 0) {
         ctx.globalAlpha = 0.5;
     }
     
-    // Belmont body (simple rectangle for now)
-    ctx.fillStyle = '#8B4513'; // Brown leather outfit
-    ctx.fillRect(screenX, screenY + 16, Belmont.width, Belmont.height - 16);
+    // Investigator body
+    ctx.fillStyle = '#2C3E50'; // Dark suit
+    ctx.fillRect(screenPos.x, screenPos.y + 16, Investigator.width, Investigator.height - 16);
     
     // Head
     ctx.fillStyle = '#FDBCB4'; // Skin tone
-    ctx.fillRect(screenX + 8, screenY, 16, 16);
+    ctx.fillRect(screenPos.x + 8, screenPos.y, 16, 16);
     
     // Hair
-    ctx.fillStyle = '#4B3621'; // Dark brown hair
-    ctx.fillRect(screenX + 6, screenY, 20, 8);
+    ctx.fillStyle = '#4B3621'; // Dark hair
+    ctx.fillRect(screenPos.x + 6, screenPos.y, 20, 8);
     
-    // Whip
-    if (Belmont.whipExtended) {
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        ctx.moveTo(screenX + Belmont.width/2, screenY + 16);
-        ctx.lineTo(screenX + Belmont.width/2 + Belmont.facing * Belmont.whipLength, screenY + 16);
-        ctx.stroke();
-        
-        // Whip tip
-        for (let segment of Whip.segments) {
-            ctx.fillStyle = '#C0C0C0';
-            ctx.fillRect(segment.x, segment.y, segment.width, segment.height);
+    // Laptop (whip)
+    if (Investigator.whipExtended) {
+        for (let segment of Laptop.segments) {
+            const segmentPos = Camera.apply(segment);
+            ctx.fillStyle = '#34495E'; // Laptop gray
+            ctx.fillRect(segmentPos.x, segmentPos.y, segment.width, segment.height);
         }
     }
     
     ctx.restore();
 }
 
-function renderCastle() {
-    // Background gradient
+function renderDataCenter() {
+    // Background
     const bgGradient = ctx.createLinearGradient(0, 0, 0, Game.height);
-    bgGradient.addColorStop(0, '#0a0a0a');
-    bgGradient.addColorStop(0.5, '#1a1a2a');
-    bgGradient.addColorStop(1, '#2a2a3a');
+    if (Game.currentLevel <= 2) {
+        bgGradient.addColorStop(0, '#1a1a2e');
+        bgGradient.addColorStop(1, '#0a0a1e');
+    } else if (Game.currentLevel <= 4) {
+        bgGradient.addColorStop(0, '#2a2a3e');
+        bgGradient.addColorStop(1, '#1a1a2e');
+    } else {
+        bgGradient.addColorStop(0, '#3a3a4e');
+        bgGradient.addColorStop(1, '#2a2a3e');
+    }
     ctx.fillStyle = bgGradient;
-    ctx.fillRect(0, 0, Castle.width, Game.height);
-    
-    // Moon
-    ctx.fillStyle = '#F0E68C';
-    ctx.beginPath();
-    ctx.arc(Castle.width - 100, 100, 40, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(0, 0, Game.width, Game.height);
     
     // Platforms
-    for (let platform of Castle.platforms) {
-        const gradient = ctx.createLinearGradient(0, platform.y, 0, platform.y + platform.height);
-        gradient.addColorStop(0, '#4a4a4a');
+    for (let platform of DataCenter.platforms) {
+        const screenPos = Camera.apply(platform);
+        
+        let color;
+        switch(platform.type) {
+            case 'concrete': color = '#696969'; break;
+            case 'metal': color = '#708090'; break;
+            case 'wood': color = '#8B4513'; break;
+            case 'sand': color = '#F4A460'; break;
+            case 'marble': color = '#F0F8FF'; break;
+            default: color = '#4a4a4a';
+        }
+        
+        const gradient = ctx.createLinearGradient(0, screenPos.y, 0, screenPos.y + platform.height);
+        gradient.addColorStop(0, color);
         gradient.addColorStop(1, '#2a2a2a');
         ctx.fillStyle = gradient;
-        ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        ctx.fillRect(screenPos.x, screenPos.y, platform.width, platform.height);
         
-        // Stone texture
-        ctx.strokeStyle = '#3a3a3a';
+        // Platform edge highlight
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = 1;
-        for (let x = platform.x; x < platform.x + platform.width; x += 32) {
-            ctx.beginPath();
-            ctx.moveTo(x, platform.y);
-            ctx.lineTo(x, platform.y + platform.height);
-            ctx.stroke();
-        }
+        ctx.strokeRect(screenPos.x, screenPos.y, platform.width, platform.height);
     }
     
-    // Stairs
-    for (let stair of Castle.stairs) {
-        ctx.fillStyle = '#5a3a2a';
-        ctx.fillRect(stair.x, stair.y, stair.width, stair.height);
+    // Servers
+    for (let server of DataCenter.servers) {
+        const screenPos = Camera.apply(server);
         
-        // Individual steps
-        ctx.strokeStyle = '#4a2a1a';
-        ctx.lineWidth = 1;
-        for (let y = stair.y; y < stair.y + stair.height; y += 8) {
-            ctx.beginPath();
-            ctx.moveTo(stair.x, y);
-            ctx.lineTo(stair.x + stair.width, y);
-            ctx.stroke();
-        }
-    }
-    
-    // Candles
-    for (let candle of Castle.candles) {
-        if (candle.lit) {
-            // Candle base
-            ctx.fillStyle = '#FFA500';
-            ctx.fillRect(candle.x, candle.y + 20, candle.width, 12);
+        if (server.active) {
+            // Server rack
+            ctx.fillStyle = '#2C3E50';
+            ctx.fillRect(screenPos.x, screenPos.y, server.width, server.height);
             
-            // Flame
-            const flicker = Math.sin(Date.now() * 0.01) * 2;
-            ctx.fillStyle = '#FFD700';
-            ctx.beginPath();
-            ctx.ellipse(candle.x + candle.width/2, candle.y + 16 + flicker, 6, 10, 0, 0, Math.PI * 2);
-            ctx.fill();
+            // LED lights
+            ctx.fillStyle = '#00FF00';
+            for (let i = 0; i < 3; i++) {
+                const blink = Math.sin(Date.now() * 0.005 + i) > 0;
+                ctx.fillRect(screenPos.x + 4 + i * 8, screenPos.y + 4, 4, 4);
+            }
             
-            // Flame glow
-            ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(candle.x + candle.width/2, candle.y + 16, 15, 20, 0, 0, Math.PI * 2);
-            ctx.fill();
+            // Glow when active
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+            ctx.fillRect(screenPos.x - 5, screenPos.y - 5, server.width + 10, server.height + 10);
         } else {
-            // Extinguished candle
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(candle.x, candle.y + 20, candle.width, 12);
+            // Deactivated server
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(screenPos.x, screenPos.y, server.width, server.height);
         }
     }
     
-    // Water pits
-    for (let water of Castle.water) {
-        ctx.fillStyle = '#001a33';
-        ctx.fillRect(water.x, water.y - water.height, water.width, water.height);
-        
-        // Water waves
-        ctx.strokeStyle = '#003366';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        for (let x = water.x; x < water.x + water.width; x += 20) {
-            const wave = Math.sin((x + Date.now() * 0.002) * 0.1) * 3;
-            ctx.lineTo(x, water.y - water.height + wave);
+    // Files to collect
+    for (let file of DataCenter.files) {
+        if (!file.collected) {
+            const screenPos = Camera.apply(file);
+            const pulse = 0.8 + Math.sin(Date.now() * 0.005) * 0.2;
+            
+            // File icon
+            if (file.hidden) {
+                // Hidden file - barely visible
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.1)';
+                ctx.fillRect(screenPos.x, screenPos.y, file.width, file.height);
+                
+                // Faint outline only
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screenPos.x, screenPos.y, file.width, file.height);
+            } else if (file.type === 'blackbook') {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(screenPos.x, screenPos.y, file.width, file.height);
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(screenPos.x + 4, screenPos.y + 4, file.width - 8, file.height - 8);
+            } else {
+                ctx.fillStyle = '#FF0000';
+                ctx.fillRect(screenPos.x, screenPos.y, file.width, file.height);
+                
+                // File label
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '8px monospace';
+                ctx.fillText('EPI', screenPos.x + 2, screenPos.y + file.height - 2);
+            }
+            
+            // Glow effect
+            const glowColor = file.hidden ? 'rgba(255, 215, 0, 0.1)' : 
+                           file.type === 'blackbook' ? 'rgba(255, 215, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)';
+            ctx.fillStyle = glowColor;
+            ctx.fillRect(screenPos.x - 10, screenPos.y - 10, file.width + 20, file.height + 20);
         }
-        ctx.stroke();
+    }
+
+    
+    // Bottomless pits
+    for (let pit of DataCenter.bottomlessPits) {
+        const screenPos = Camera.apply(pit);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(screenPos.x, screenPos.y - pit.height, pit.width, pit.height);
+        
+        // Danger lines
+        ctx.strokeStyle = '#FF0000';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(screenPos.x, screenPos.y - pit.height, pit.width, pit.height);
+        ctx.setLineDash([]);
     }
 }
 
 function renderEnemies() {
-    for (let enemy of Castle.enemies) {
-        let x = enemy.x;
-        let y = enemy.y;
+    for (let enemy of DataCenter.enemies) {
+        const screenPos = Camera.apply(enemy);
         
         // Flashing when invulnerable
         if (enemy.invulnerable > 0 && Math.floor(enemy.invulnerable * 10) % 2 === 0) {
@@ -841,43 +1126,42 @@ function renderEnemies() {
         }
         
         switch(enemy.type) {
-            case 'zombie':
-                ctx.fillStyle = '#4a7c4e';
-                ctx.fillRect(x, y, enemy.width, enemy.height - 16);
-                ctx.fillStyle = '#8B4513';
-                ctx.fillRect(x + 4, y, enemy.width - 8, 12);
-                // Arms
-                ctx.fillRect(x - 4, y + 12, 8, 20);
-                ctx.fillRect(x + enemy.width - 4, y + 12, 8, 20);
+            case 'guard':
+                // Security guard
+                ctx.fillStyle = '#1a1a1a'; // Black uniform
+                ctx.fillRect(screenPos.x, screenPos.y, enemy.width, enemy.height - 16);
+                ctx.fillStyle = '#2C3E50'; // Face
+                ctx.fillRect(screenPos.x + 4, screenPos.y, enemy.width - 8, 12);
                 break;
                 
-            case 'bat':
+            case 'drone':
+                // Security drone
                 const flap = Math.sin(Date.now() * 0.02) * 5;
-                ctx.fillStyle = '#2a2a2a';
-                // Body
-                ctx.fillRect(x, y + 8, enemy.width, enemy.height - 8);
-                // Wings
-                ctx.fillRect(x - 12 + flap, y, 12, 12);
-                ctx.fillRect(x + enemy.width, y, 12 - flap, 12);
+                ctx.fillStyle = '#34495E';
+                ctx.fillRect(screenPos.x, screenPos.y + 8, enemy.width, enemy.height - 8);
+                // Rotors
+                ctx.fillRect(screenPos.x - 8 + flap, screenPos.y, 8, 8);
+                ctx.fillRect(screenPos.x + enemy.width, screenPos.y, 8 - flap, 8);
                 break;
                 
-            case 'skeleton':
-                ctx.fillStyle = '#F5F5DC';
-                ctx.fillRect(x, y, enemy.width, enemy.height - 16);
+            case 'elite':
+                // Elite security
+                ctx.fillStyle = '#8B0000'; // Red uniform
+                ctx.fillRect(screenPos.x, screenPos.y, enemy.width, enemy.height - 16);
+                ctx.fillStyle = '#2C3E50'; // Face
+                ctx.fillRect(screenPos.x + 6, screenPos.y, enemy.width - 12, 12);
+                // Helmet
                 ctx.fillStyle = '#4a4a4a';
-                ctx.fillRect(x + 6, y, enemy.width - 12, 12);
-                // Bones
-                ctx.fillRect(x - 2, y + 12, 6, 20);
-                ctx.fillRect(x + enemy.width - 4, y + 12, 6, 20);
+                ctx.fillRect(screenPos.x + 4, screenPos.y - 4, enemy.width - 8, 8);
                 break;
         }
         
         // Health bar
         if (enemy.health < enemy.maxHealth) {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-            ctx.fillRect(x, y - 10, enemy.width, 4);
+            ctx.fillRect(screenPos.x, screenPos.y - 10, enemy.width, 4);
             ctx.fillStyle = 'rgba(0, 255, 0, 0.8)';
-            ctx.fillRect(x, y - 10, enemy.width * (enemy.health / enemy.maxHealth), 4);
+            ctx.fillRect(screenPos.x, screenPos.y - 10, enemy.width * (enemy.health / enemy.maxHealth), 4);
         }
         
         ctx.globalAlpha = 1;
@@ -886,32 +1170,29 @@ function renderEnemies() {
 
 function renderProjectiles() {
     for (let proj of Subweapons.projectiles) {
+        const screenPos = Camera.apply(proj);
+        
         switch(proj.type) {
-            case 'dagger':
-                ctx.fillStyle = '#C0C0C0';
-                ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+            case 'laptop':
+                ctx.fillStyle = '#34495E';
+                ctx.fillRect(screenPos.x, screenPos.y, proj.width, proj.height);
                 break;
                 
-            case 'holyWater':
+            case 'drive':
                 if (!proj.exploding) {
-                    ctx.fillStyle = '#4169E1';
-                    ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+                    ctx.fillStyle = '#0066CC';
+                    ctx.fillRect(screenPos.x, screenPos.y, proj.width, proj.height);
                 } else {
-                    // Holy fire explosion
-                    ctx.fillStyle = 'rgba(255, 100, 0, ' + (1 - proj.explosionTimer) + ')';
-                    ctx.fillRect(proj.x - 20, proj.y - 20, 40, 40);
+                    // Data explosion
+                    ctx.fillStyle = 'rgba(0, 100, 255, ' + (1 - proj.explosionTimer) + ')';
+                    ctx.fillRect(screenPos.x - 20, screenPos.y - 20, 40, 40);
                 }
                 break;
                 
-            case 'cross':
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(proj.x, proj.y + 8, proj.width, proj.height - 16);
-                ctx.fillRect(proj.x + 8, proj.y, proj.width - 16, proj.height);
-                break;
-                
-            case 'bone':
-                ctx.fillStyle = '#F5F5DC';
-                ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+            case 'server':
+                ctx.fillStyle = '#FF6600';
+                ctx.fillRect(screenPos.x, screenPos.y + 8, proj.width, proj.height - 16);
+                ctx.fillRect(screenPos.x + 8, screenPos.y, proj.width - 16, proj.height);
                 break;
         }
     }
@@ -935,16 +1216,21 @@ function renderHUD() {
     ctx.fillStyle = '#FFD700';
     ctx.fillText(`TIME: ${Math.floor(Game.time).toString().padStart(3, '0')}`, 500, 30);
     
+    // Level
+    ctx.fillStyle = '#00FFFF';
+    ctx.fillText(`LEVEL: ${Game.currentLevel}/${Game.totalLevels}`, 700, 30);
+    
     // Hearts (subweapon ammo)
     ctx.fillStyle = '#FF0000';
     for (let i = 0; i < Game.hearts; i++) {
-        ctx.fillText('♥', 650 + i * 15, 30);
+        ctx.fillText('♥', 850 + i * 15, 30);
     }
+
     
     // Current subweapon
-    if (Belmont.currentSubweapon !== 'none') {
+    if (Investigator.currentSubweapon !== 'none') {
         ctx.fillStyle = '#00FF00';
-        ctx.fillText(`SUB: ${Belmont.currentSubweapon.toUpperCase()}`, 800, 30);
+        ctx.fillText(`SUB: ${Investigator.currentSubweapon.toUpperCase()}`, 1000, 30);
     }
     
     // Health bar
@@ -956,13 +1242,13 @@ function renderHUD() {
     ctx.strokeRect(20, Game.height - 40, 200, 30);
     
     ctx.fillStyle = '#FF0000';
-    for (let i = 0; i < Belmont.health; i++) {
+    for (let i = 0; i < Investigator.health; i++) {
         ctx.fillRect(25 + i * 11, Game.height - 35, 8, 20);
     }
 }
 
 function renderMenu() {
-    // Dark gothic background
+    // Dark conspiracy background
     const gradient = ctx.createLinearGradient(0, 0, 0, Game.height);
     gradient.addColorStop(0, '#000000');
     gradient.addColorStop(0.5, '#1a0a0a');
@@ -972,19 +1258,19 @@ function renderMenu() {
     
     // Title
     ctx.fillStyle = '#8B0000';
-    ctx.font = 'bold 72px serif';
+    ctx.font = 'bold 48px serif';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#FF0000';
     ctx.shadowBlur = 20;
-    ctx.fillText('VAMPIRE KILLER', Game.width/2, 200);
+    ctx.fillText('PRESIDENT PEDO', Game.width/2, 200);
     
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 36px serif';
+    ctx.font = 'bold 28px serif';
     ctx.shadowBlur = 10;
-    ctx.fillText('A Castlevania Adventure', Game.width/2, 260);
+    ctx.fillText('The Hunt For The Epstein Files', Game.width/2, 260);
     
     // Menu options
-    const options = ['START GAME', 'CONTROLS', 'EXIT'];
+    const options = ['START HUNT', 'CONTROLS', 'EXIT'];
     const selected = 0; // Simplified for now
     
     for (let i = 0; i < options.length; i++) {
@@ -1000,7 +1286,7 @@ function renderMenu() {
             ctx.shadowBlur = 5;
         }
         
-        ctx.font = isSelected ? 'bold 28px serif' : '24px serif';
+        ctx.font = isSelected ? 'bold 24px serif' : '20px serif';
         ctx.fillText(options[i], Game.width/2, y);
     }
     
@@ -1009,14 +1295,14 @@ function renderMenu() {
     ctx.font = '18px serif';
     ctx.shadowBlur = 0;
     ctx.fillText('Press ENTER to select', Game.width/2, Game.height - 50);
-    ctx.fillText('Arrow Keys to move, Space to jump, Z to whip, X for subweapon', Game.width/2, Game.height - 20);
+    ctx.fillText('Arrow Keys to move, Space to jump, Z to attack, X for subweapon', Game.width/2, Game.height - 20);
 }
 
 function renderGame() {
-    renderCastle();
+    renderDataCenter();
     renderEnemies();
     renderProjectiles();
-    renderBelmont();
+    renderInvestigator();
     renderHUD();
 }
 
@@ -1030,12 +1316,30 @@ function renderGameOver() {
     ctx.fillStyle = '#FF0000';
     ctx.font = 'bold 48px serif';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER', Game.width/2, Game.height/2 - 50);
+    ctx.fillText('MISSION FAILED', Game.width/2, Game.height/2 - 50);
     
     ctx.fillStyle = '#FFFFFF';
     ctx.font = '24px serif';
     ctx.fillText(`Final Score: ${Game.score}`, Game.width/2, Game.height/2);
     ctx.fillText('Press ENTER to continue', Game.width/2, Game.height/2 + 50);
+}
+
+function renderVictory() {
+    renderGame();
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, Game.width, Game.height);
+    
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 48px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('TRUTH REVEALED!', Game.width/2, Game.height/2 - 50);
+    
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '24px serif';
+    ctx.fillText(`All Files Recovered: ${Game.score}`, Game.width/2, Game.height/2);
+    ctx.fillText('The hunt is complete...', Game.width/2, Game.height/2 + 50);
+    ctx.fillText('Press ENTER to continue', Game.width/2, Game.height/2 + 100);
 }
 
 // Main Render
@@ -1051,6 +1355,9 @@ function render() {
             break;
         case 'GAMEOVER':
             renderGameOver();
+            break;
+        case 'VICTORY':
+            renderVictory();
             break;
     }
 }
@@ -1073,19 +1380,20 @@ function gameLoop(currentTime) {
             // Handle menu input
             if (Input.justPressed('Enter')) {
                 Game.state = 'PLAYING';
-                Castle.init();
+                Game.currentLevel = 1;
+                DataCenter.init(Game.currentLevel);
                 // Reset game state
                 Game.lives = 3;
                 Game.score = 0;
                 Game.hearts = 5;
                 Game.time = 400;
-                Belmont.health = Belmont.maxHealth;
-                Belmont.x = 200;
-                Belmont.y = 602;
-
+                Investigator.health = Investigator.maxHealth;
+                Investigator.x = 200;
+                Investigator.y = 602;
             }
             break;
         case 'GAMEOVER':
+        case 'VICTORY':
             if (Input.justPressed('Enter')) {
                 Game.state = 'MENU';
             }
@@ -1107,11 +1415,11 @@ function init() {
     canvas.height = Game.height;
     
     Input.init();
-    Castle.init();
+    DataCenter.init(1);
     
     lastTime = performance.now();
     requestAnimationFrame(gameLoop);
 }
 
-// Start the game
+// Start the hunt
 window.addEventListener('load', init);

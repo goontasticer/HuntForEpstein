@@ -12,7 +12,14 @@ window.PlayerInteraction = class PlayerInteraction {
     this.powerups = [];
     this.lastInteractionTime = 0;
     this.interactionCooldown = 500; // 0.5 seconds between interactions
+    
+    // Combat state
+    this.isAttacking = false;
+    this.attackCooldown = 0;
+    this.attackDuration = 0.3; // seconds
+    this.attackTimer = 0;
   }
+
   
   /**
    * Handle player interaction with environment
@@ -312,6 +319,47 @@ window.PlayerInteraction = class PlayerInteraction {
   }
   
   /**
+   * Handle attack input
+   * @param {Vector2D} position - Player position
+   * @param {string} facing - Direction player is facing
+   * @param {boolean} isGrounded - Whether player is on ground
+   */
+  handleAttack(position, facing, isGrounded) {
+    if (this.attackCooldown > 0) return;
+    
+    // Player can attack regardless of grounded state
+    this.isAttacking = true;
+    this.attackTimer = this.attackDuration;
+    this.attackCooldown = 0.4; // seconds
+    
+    // Create attack hitbox
+    const attackRange = 80;
+    const attackWidth = 20;
+    const attackHeight = 40;
+    
+    let attackX = position.x;
+    let attackY = position.y + 16; // Center height
+    
+    if (facing === 'right') {
+      attackX += attackRange / 2;
+    } else if (facing === 'left') {
+      attackX -= attackRange / 2;
+    }
+    
+    // Store attack data for collision detection
+    this.attackHitbox = {
+      x: attackX - attackWidth / 2,
+      y: attackY - attackHeight / 2,
+      width: attackWidth,
+      height: attackHeight,
+      damage: 1,
+      facing: facing
+    };
+    
+    console.log(`Attack executed facing: ${facing}, grounded: ${isGrounded}`);
+  }
+  
+  /**
    * Update power-ups (handle duration)
    * @param {number} dt - Delta time in seconds
    */
@@ -328,7 +376,21 @@ window.PlayerInteraction = class PlayerInteraction {
         }
       }
     }
+    
+    // Update attack timers
+    if (this.attackCooldown > 0) {
+      this.attackCooldown -= dt;
+    }
+    
+    if (this.attackTimer > 0) {
+      this.attackTimer -= dt;
+      if (this.attackTimer <= 0) {
+        this.isAttacking = false;
+        this.attackHitbox = null;
+      }
+    }
   }
+
   
   /**
    * Reset interaction system
@@ -337,7 +399,14 @@ window.PlayerInteraction = class PlayerInteraction {
     this.files = [];
     this.powerups = [];
     this.lastInteractionTime = 0;
+    
+    // Reset combat state
+    this.isAttacking = false;
+    this.attackCooldown = 0;
+    this.attackTimer = 0;
+    this.attackHitbox = null;
   }
+
   
   /**
    * Get interaction state for debugging
@@ -349,7 +418,11 @@ window.PlayerInteraction = class PlayerInteraction {
       activePowerups: this.powerups.length,
       powerupTypes: this.getActivePowerupTypes(),
       lastInteractionTime: this.lastInteractionTime,
-      interactionCooldown: this.interactionCooldown
+      interactionCooldown: this.interactionCooldown,
+      isAttacking: this.isAttacking,
+      attackCooldown: this.attackCooldown,
+      attackTimer: this.attackTimer
     };
   }
+
 };

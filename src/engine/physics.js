@@ -316,6 +316,13 @@ window.PhysicsEngine = class PhysicsEngine {
   }
   
   checkCollisions() {
+    // Reset grounded state for all entities with movement system
+    for (const entity of this.entities) {
+      if (entity.movement) {
+        entity.movement.setGrounded(false);
+      }
+    }
+    
     for (const entity of this.entities) {
       if (!entity.physics || !entity.collider) continue;
       
@@ -337,6 +344,7 @@ window.PhysicsEngine = class PhysicsEngine {
       }
     }
   }
+
   
   checkTriggers() {
     for (const entity of this.entities) {
@@ -379,11 +387,18 @@ window.PhysicsEngine = class PhysicsEngine {
     // Find smallest push-out direction
     let pushX = 0;
     let pushY = 0;
+    let isGroundCollision = false;
     
     if (Math.abs(overlap.x) < Math.abs(overlap.y)) {
       pushX = -Math.sign(overlap.x) * Math.abs(overlap.x);
     } else {
       pushY = -Math.sign(overlap.y) * Math.abs(overlap.y);
+      
+      // Check if this is a ground collision (player landing on top)
+      if (entity.movement && pushY < 0) {
+        // Player is being pushed up (landing on top of something)
+        isGroundCollision = true;
+      }
     }
     
     entity.position.x += pushX;
@@ -397,8 +412,17 @@ window.PhysicsEngine = class PhysicsEngine {
       entity.physics.velocity.y = 0;
     }
     
+    // Update player's grounded state
+    if (entity.movement) {
+      if (isGroundCollision) {
+        entity.movement.setGrounded(true);
+      }
+      // If player is moving horizontally and hits a wall, don't affect grounded state
+    }
+    
     this.updateColliderPosition(entity.collider, entity.position);
   }
+
   
   resolveEntityCollision(entity1, entity2) {
     // Simple elastic collision
